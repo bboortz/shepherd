@@ -1,0 +1,8 @@
+name: shepherd-verify
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  verify:
+    uses: bboortz/shepherd/.github/workflows/reusable-verify.yml@main
+    secrets: inherit

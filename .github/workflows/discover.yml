@@ -1,0 +1,33 @@
+name: discover
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate installation token
+        id: token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SHEPHERD_APP_ID }}
+          private-key: ${{ secrets.SHEPHERD_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - uses: actions/checkout@v4
+
+      - name: Onboard tagged repos and flag untagged ones
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          # Scaffold per DESIGN §6. Implemented in a later release.
+          # - list repos with topic shepherd-managed
+          # - for each without .shepherd.yml: branch shepherd/onboard, copy templates/*, open PR "Onboard to Shepherd"
+          # - for repos that lost the topic: open offboarding issue, never delete
+          echo "discover: not yet implemented"

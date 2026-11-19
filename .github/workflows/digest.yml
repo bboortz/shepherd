@@ -1,0 +1,30 @@
+name: digest
+
+on:
+  schedule:
+    - cron: "0 9 * * MON"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate installation token
+        id: token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SHEPHERD_APP_ID }}
+          private-key: ${{ secrets.SHEPHERD_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Compose and send weekly digest
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
+        run: |
+          # Scaffold per DESIGN §9 (digest: weekly). Implemented in a later release.
+          # - summarise fleet activity over the past week (PRs opened, merged, needs-human issues, failed verifications)
+          # - POST summary to $NTFY_TOPIC_URL
+          echo "digest: not yet implemented"

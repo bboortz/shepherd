@@ -1,0 +1,15 @@
+auto_merge_default:
+  patch: true
+  minor: true
+  major: false
+always_human:
+  - major-version
+  - cve-without-fix
+  - failed-rollback
+  - data-migration
+quiet_hours: "22:00-07:00 Europe/Berlin"
+page_immediately:
+  - critical-cve-no-fix
+  - rollback-failed
+  - ladder-exhausted
+digest: weekly

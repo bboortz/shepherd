@@ -1,0 +1,44 @@
+name: reusable-verify
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load .shepherd.yml
+        id: cfg
+        run: |
+          if [ ! -f .shepherd.yml ]; then
+            echo "::error ::.shepherd.yml missing — repo is not onboarded to Shepherd"
+            exit 1
+          fi
+          {
+            echo "build=$(yq -r '.build' .shepherd.yml)"
+            echo "test=$(yq -r '.test' .shepherd.yml)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: ${{ steps.cfg.outputs.build }}
+
+      - name: Test
+        run: ${{ steps.cfg.outputs.test }}
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

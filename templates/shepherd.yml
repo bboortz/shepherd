@@ -1,0 +1,11 @@
+version: 1
+risk: low            # low | medium | high
+build: make build
+test: make test
+auto_merge:
+  patch: true
+  minor: true
+  major: false
+security_fix: pr-only  # pr-only | auto-merge-low-risk
+notify: ntfy
+owner: benni
