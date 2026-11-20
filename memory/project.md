@@ -17,6 +17,7 @@ From `docs/DESIGN.md §12`:
 5. **Failed fixes always open a needs-human issue.** No quiet logging. If an issue for the same problem exists, the bot comments instead of duplicating.
 6. **Fix scope is per-repo, defaults to level 1.** Level 4 (pipelines) always needs a human-reviewed approval.
 7. **Gates before auto-merge.** Required pipelines green, diff ≤ 50 lines, 24h waiting period from release date, scan not worse (default: HIGH+CRITICAL).
+8. **No third-party GitHub Actions in shepherd's critical path (SH-001).** Exceptions: `actions/*` (GitHub-native), SHA-pinned only. Dependency bumps go through `shepherd-bump` (first-party Zig binary), not Renovate or Dependabot.
 
 ## Release trajectory (from `docs/DESIGN.md §13`)
 

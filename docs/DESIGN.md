@@ -18,14 +18,14 @@ Status: draft. Release 0 (POC) is in progress. Sections 1 to 11 describe the ori
 ```text
 shepherd/
   README.md
+  bump.zig                 # first-party bump engine, Zig single-file (SH-001)
+  build.zig                # Zig build
   policy/
     default.yml            # global rules: what may auto-merge, quiet hours
     repos/                 # optional per-repo overrides
-  renovate/
-    default.json           # shared Renovate preset
   .github/workflows/
     discover.yml           # finds tagged repos, opens onboarding PRs
-    renovate.yml           # self-hosted Renovate run across the fleet
+    bump.yml               # runs shepherd-bump on cron (SH-001)
     digest.yml             # weekly digest to ntfy
     reusable-verify.yml    # reusable workflow every repo calls
   templates/
@@ -53,29 +53,29 @@ owner: benni
 
 Risk levels: **low** means patch and minor bumps auto-merge once CI is green. **medium** means only patch auto-merges. **high** means nothing auto-merges, everything goes to the human queue.
 
-## 4. Shared Renovate preset (`renovate/default.json`)
+## 4. Bump engine (`shepherd-bump`, SH-001)
 
-```json
-{
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":semanticCommits", "helpers:pinGitHubActionDigests", "docker:pinDigests"],
-  "vulnerabilityAlerts": { "labels": ["security"], "enabled": true },
-  "packageRules": [
-    {
-      "matchUpdateTypes": ["patch", "minor", "digest", "pin"],
-      "automerge": true,
-      "platformAutomerge": true
-    },
-    {
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "labels": ["needs-human"]
-    }
-  ],
-  "prConcurrentLimit": 5,
-  "schedule": ["at any time"]
-}
-```
+Shepherd runs its own bump engine. The previous plan to use Renovate is retired
+(see [SH-001](stories/SH-001-retire-renovate.md)) because no third-party
+GitHub Action belongs in the fleet's critical path (§12). The engine is a Zig
+single-file binary, built from `bump.zig`, with no runtime dependencies.
+
+- **Language:** Zig (pinned to the same version as `healthy`).
+- **Layout:** single source file `bump.zig` at repo root; splits only when a
+  measured constraint forces it.
+- **Ecosystems:** GitHub Actions first (SH-001). npm, pip, Go, Docker images and
+  Zig itself follow in separate stories.
+- **Discovery for `gh-actions`:** parse `uses: owner/repo@<sha>  # vX.Y.Z` lines in
+  `.github/workflows/*.yml` and `.github/actions/**/action.yml`.
+- **Version source:** `GET /repos/{owner}/{repo}/tags` → highest tag within the
+  pinned major. Annotated tags are dereferenced to the underlying commit SHA.
+- **Output:** one PR per bumpable dep against `dev`, labelled `shepherd-bump`
+  and `<ecosystem>`. Orphaned pins (upstream tag deleted or force-pushed) open a
+  needs-human issue instead.
+- **Policy defaults:** stay within the current major; patch and minor bumps are
+  eligible for auto-merge subject to the §12 gates; major bumps are needs-human.
+- **Config:** no shared preset file. Per-repo overrides live in `.shepherd.yml`
+  (future stories expose the knobs that matter).
 
 ## 5. Caller workflow in each managed repo (`.github/workflows/shepherd-verify.yml`)
 
@@ -100,10 +100,18 @@ The reusable workflow reads `.shepherd.yml`, runs the build and test commands, r
 - For each repo without `.shepherd.yml`, open a branch `shepherd/onboard`, copy in `.shepherd.yml` and the caller workflow, and open a PR titled "Onboard to Shepherd".
 - For repos that lost the topic, open an issue suggesting offboarding. Never delete anything automatically.
 
-## 7. Renovate workflow (`renovate.yml`), in words
+## 7. Bump workflow (`bump.yml`), in words
 
-- Trigger: every few hours plus manual dispatch.
-- Runs the self-hosted Renovate action with the App token, autodiscovering repos by the `shepherd-managed` topic, and using `renovate/default.json` as the preset.
+- Trigger: daily schedule (04:00 UTC) plus manual dispatch.
+- Checks out the shepherd repo, runs `make build` to produce `bin/shepherd-bump`,
+  then invokes `./bin/shepherd-bump --ecosystem gh-actions` against the target
+  repo(s).
+- Authenticated with `SHEPHERD_BUMP_TOKEN` — a fine-grained PAT scoped to the
+  target repo(s) with `Contents: write`, `Pull requests: write`, `Issues: write`.
+  No GitHub App on the default path (§13).
+- Fleet-wide bump (autodiscovery by `shepherd-managed` topic) activates with the
+  fleet layer after Release 3. Until then, `bump.yml` only operates on the
+  shepherd repo itself (dogfood).
 
 ## 8. Escalation template (`docs/needs-human.md`)
 
@@ -143,7 +151,7 @@ digest: weekly
 3. Create an ntfy topic and store its URL as a secret.
 4. Add the files from sections 3 to 9.
 5. Tag one pilot repo with `shepherd-managed` and run discovery manually.
-6. Watch the first onboarding PR and the first Renovate PR go through.
+6. Watch the first onboarding PR and the first `shepherd-bump` PR go through.
 
 ## 12. Trust boundary (decisions so far)
 
@@ -177,6 +185,13 @@ The bot may only merge on its own where a repo allows it, and only when every ga
 - When a fix fails verification, the agent gets the error output and retries 3 times by default, configurable per repo.
 - After the last failed attempt, or whenever the bot needs human help, it always opens a needs-human issue in the repo, for security fixes and routine bumps alike. There is no quiet logging.
 - If a needs-human issue for the same problem is already open, the bot comments on it instead of opening a duplicate.
+
+**Supply chain (SH-001)**
+
+- **No third-party GitHub Actions in shepherd's critical path.** Exceptions: GitHub-native `actions/*` and the Trivy install step, SHA-pinned only. Reason: CVE-2026-33634 (TeamPCP, March 2026) proved mutable-tag attacks on `aquasecurity/trivy-action` are live — the same vector applies to any third-party Action with commit authority.
+- **First-party bump engine.** Dependency bumps are produced by `shepherd-bump` (Zig, single file, no runtime deps) running inside the shepherd workflow. Renovate and similar services are not in the trust base. Dependabot remains useful as a second-opinion signal for CVE surfacing but is not on the critical path.
+- **SHA-pin all `uses:` lines.** Every `uses: owner/repo@...` reference in `.github/workflows/*.yml` and `.github/actions/**/action.yml` resolves to a 40-character commit SHA. Mutable tag refs fail verification (a lint from Release 1 onward).
+- **Orphaned pins fail loud.** When `shepherd-bump` finds a pinned SHA that no longer resolves to any upstream tag (force-pushed or deleted), it opens a needs-human issue; it does not silently rewrite.
 
 **Fix scope levels**
 
@@ -295,7 +310,7 @@ This plan supersedes the phases in section 10 for the first public version. Four
 
 ### Risks to watch
 
-- Plain Renovate or Dependabot is considered good enough. Counter: the sandboxed AI fixer with hard budget and protected files is the clear difference.
+- Plain Renovate or Dependabot is considered good enough. Counter: the sandboxed AI fixer with hard budget, protected files, and a first-party bump path (no third-party Actions in the critical path, SH-001) is the clear difference.
 - Setup takes longer than 15 minutes. Counter: measure it with outside testers in Release 2.
 - Launch gets no attention. Counter: prepare the demo and the story before launching, and choose the day deliberately.
 - A prompt injection incident damages trust. Counter: threat model and injection tests are published and part of the exit criteria.

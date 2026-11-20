@@ -2,14 +2,32 @@
 
 Not-yet-promoted ideas. New ideas land here immediately, even if we won't pick them up. Promote to `docs/stories/SH-NNN-<slug>.md` when a story is cut.
 
+## Promoted
+
+- **[SH-001](../stories/SH-001-retire-renovate.md) — Retire Renovate; add `shepherd-bump` for GitHub Actions.** Status: draft (2026-11-21).
+
 ## Open from DESIGN.md §13
 
-- **Supported ecosystems for R2 / 1.0.** Candidates: Docker images, GitHub Actions, npm, pip, Go, Zig. Final list is still open. Needs its own story once the agent prototype in R0 tells us which ecosystems are cheap to support.
 - **Project name for the public release.** Keep *Shepherd* or rename. Decide before R2's README lands.
+
+## shepherd-bump — follow-up ecosystems (after SH-001)
+
+One story per ecosystem. Each extends `shepherd-bump` (Zig single-file budget permitting). Scope per story: discovery, version resolution, PR shape, orphan-pin handling.
+
+- **npm.** `package.json` + `package-lock.json`. Registry: `registry.npmjs.org`. Highest user value for the public launch.
+- **pip.** `requirements.txt`, `pyproject.toml`, `Pipfile.lock`. Registry: PyPI simple index.
+- **Go modules.** `go.mod`. Registry: Go module proxy.
+- **Docker images.** `FROM` lines in `Dockerfile` + Compose refs. Registries: Docker Hub, GHCR. Pin by digest, not tag.
+- **Zig.** `build.zig.zon`. Keep internal first; interesting mostly for `healthy`.
+
+## Supply chain — further hardening
+
+- **Replace `aquasecurity/trivy-action` with an inline, sigstore-verified Trivy install.** The binary is fine; the Action wrapper is the vector (CVE-2026-33634). Install via `curl` + `cosign verify-blob` of the sigstore bundle in `reusable-verify.yml`. Alternative: switch scanner to osv-scanner or grype entirely. Needs a story.
+- **Lint: refuse mutable action refs.** A gate (`verify-sha-pinned-actions`) that fails CI if any `uses:` line is not a 40-hex SHA. Complement to `shepherd-bump`.
 
 ## Candidates from DESIGN.md §12
 
-- **Scope level 2 (small code changes after an upgrade).** Lands in R2 per §13, but worth a story to pin the guardrails — e.g. how to detect that a dep bump broke an API surface, what the retry/escalation ladder looks like.
+- **Scope level 2 (small code changes after an upgrade).** Lands in R2 per §13, but worth a story to pin the guardrails — how to detect that a dep bump broke an API surface, what the retry/escalation ladder looks like.
 - **Scope level 3 (general source fixes for security findings).** Same release, higher blast radius — needs its own story with an injection-safety section.
 - **Scope level 4 (pipelines / workflows).** Explicitly requires a human-reviewed approval — the story is how the bot even surfaces it as a candidate without being able to touch the files.
 
