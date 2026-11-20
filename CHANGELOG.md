@@ -16,6 +16,11 @@ Pre-release scaffold. Not tagged or published yet.
 ### Security
 
 - Pin `aquasecurity/trivy-action` to `v0.36.0` SHA (`ed142fd0673e97e23eac54620cfb913e5ce36c25`) in `.github/workflows/reusable-verify.yml`. The previous `@0.28.0` tag was in the vulnerable range of **GHSA-69fq-xp46-6x23 / CVE-2026-33634** — the TeamPCP supply-chain attack of March 2026, which force-pushed 76 of 77 `trivy-action` tags to malicious commits containing a secret-stealer. Dependabot flagged this on the very first push — the irony is noted and the lesson is Shepherd's (`docs/CAPABILITIES.md § sandbox` and `blocklist.protected-registration-files`).
+- SHA-pin the remaining third-party actions in the shepherd fleet workflows. Mutable major-version tags removed in favour of resolved commit SHAs at the latest patch within each current major:
+  - `actions/create-github-app-token@v1` → `d72941d7…` (`v1.12.0`) in `discover.yml`, `renovate.yml`, `digest.yml`.
+  - `actions/checkout@v4` → `11d5960a…` (`v4.4.0`) in `discover.yml`, `renovate.yml`, `reusable-verify.yml`.
+  - `renovatebot/github-action@v41` → `8ac70de2…` (`v41.0.22`) in `renovate.yml`.
+  The Trivy advisory's generalisation applies: force-push on a mutable tag is a supply-chain entry point. Renovate's shared preset already extends `helpers:pinGitHubActionDigests`, so future bumps stay SHA-pinned.
 
 ### Added
 
