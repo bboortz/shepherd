@@ -221,3 +221,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ─────────────────────────────────────────────────────────────
+# shepherd-specific
+# ─────────────────────────────────────────────────────────────
+
+# Local Claude Code state
+.claude/
+
+# Session helpers, not source
+resume.sh
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Shepherd runtime caches (reserved for the Action)
+.shepherd-cache/
+.shepherd-work/

@@ -1,3 +1,4 @@
+---
 version: 1
 risk: low            # low | medium | high
 build: make build

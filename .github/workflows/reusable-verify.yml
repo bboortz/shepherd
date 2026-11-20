@@ -1,6 +1,7 @@
+---
 name: reusable-verify
 
-on:
+"on":
   workflow_call: {}
 
 permissions:
