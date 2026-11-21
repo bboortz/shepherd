@@ -1,23 +1,19 @@
 ---
-# Shepherd gates caller (SH-009). Acts on shepherd-agent-labelled PRs only.
-# Re-fires on workflow_run so gates re-check once PR CI finishes.
+# Shepherd gates caller (SH-009 part 1). Acts on shepherd-agent-labelled PRs.
+# `workflow_run` re-fire deferred to part 2 (needs workflow-name filtering
+# and PR-number resolution that can't be done cleanly from a push-event
+# workflow_run). For part 1, gates re-evaluate on `synchronize` + `labeled`.
 # Pin @main to a tagged SHA from R1 onward.
 name: shepherd-gates
 "on":
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-  workflow_run:
-    workflows: [shepherd, "*"]
-    types: [completed]
 permissions:
   contents: write
   pull-requests: write
 jobs:
   gates:
-    if: >-
-      (github.event_name == 'pull_request' &&
-        contains(github.event.pull_request.labels.*.name, 'shepherd-agent'))
-      || github.event_name == 'workflow_run'
+    if: contains(github.event.pull_request.labels.*.name, 'shepherd-agent')
     uses: bboortz/shepherd/.github/workflows/reusable-shepherd-gates.yml@main
     with:
-      pr_number: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || 0 }}
+      pr_number: ${{ github.event.pull_request.number }}

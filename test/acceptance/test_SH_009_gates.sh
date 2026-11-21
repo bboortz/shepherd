@@ -91,7 +91,7 @@ if [ "$n" -le 25 ]; then pass=$((pass + 1))
 else fail=$((fail + 1)); echo "FAIL caller-shepherd-gates.yml is $n lines, cap is 25"; fi
 assert_contains "$CALLER" "bboortz/shepherd/.github/workflows/reusable-shepherd-gates.yml"
 assert_contains "$CALLER" "shepherd-agent"
-assert_contains "$CALLER" "workflow_run"
+assert_contains "$CALLER" "pull_request"
 assert_not_contains "$CALLER" "secrets: inherit"
 
 # ----- Scenario 4 — open-pr.sh applies shepherd-agent label ----------------

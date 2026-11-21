@@ -6,7 +6,15 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-009 **part 2** (scan-not-worse + needs-human + dry-run + beaconry/HRC rollout + live canary) + SH-008 (sandbox perimeter) + SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+Next: SH-009 **part 2** (scan-not-worse + needs-human + dry-run + workflow_run re-fire + beaconry/HRC rollout + live canary) + SH-008 (sandbox perimeter) + SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+
+## [v0.6.0-rc2] — 2026-11-21 — SH-009 part 1 bugfix: drop workflow_run trigger
+
+### Fixed
+
+- `templates/caller-shepherd-gates.yml` was triggering on `workflow_run` with `workflows: [shepherd, "*"]`. The `"*"` is not a valid wildcard here, and post-merge CI runs (push-event-triggered) have no associated PR → `workflow_run.pull_requests = []` → `pr_number` fell back to `0` → `gh pr view 0` errored → `set -e` killed the step. Observed on [healthy run 44946088384](https://github.com/bboortz/healthy/actions/runs/44946088384).
+- **Fix:** drop the `workflow_run` trigger for part 1. Gates re-evaluate on `pull_request: synchronize` + `labeled` events, which is sufficient for the part-1 feature set. A properly-filtered `workflow_run` re-fire-on-CI-complete lands with SH-009 part 2.
+- Belt-and-suspenders guard added in `reusable-shepherd-gates.yml`: if `PR_NUMBER` is empty or `0`, decision("no PR context") and exit 0 cleanly instead of crashing on `gh pr view 0`.
 
 ## [v0.6.0-rc1] — 2026-11-21 — SH-009 part 1: auto-merge gates + schema v1
 
