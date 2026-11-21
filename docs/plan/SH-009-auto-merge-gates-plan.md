@@ -114,7 +114,43 @@ Part 2 (follow-up ship): scan-not-worse, needs-human, dry-run, beaconry + HRC ro
 
 **Canary wiring verified**: on healthy #20 (a human PR with no `shepherd-agent` label), the gates workflow fired and correctly reported `gates: skipping` — the label-filter in the caller workflow works as designed. A labelled test PR + actual auto-merge demonstration lands with SH-009 part 2 along with the beaconry + HRC rollout.
 
-### Part 2 scope (not yet shipped)
+### Part 2 (2026-11-21, same-day as part 1)
+
+| PR | Repo | Result |
+|---|---|---|
+| [shepherd #13](https://github.com/bboortz/shepherd/pull/13) | shepherd | v0.6.0-rc3: scan-not-worse + needs-human + dry-run + workflow_run |
+| shepherd direct commits `fbc68b8` → `b138272` | shepherd | 3 rapid bugfixes on main (rc4/5/6) — see below |
+| [healthy #22](https://github.com/bboortz/healthy/pull/22) + [#23](https://github.com/bboortz/healthy/pull/23) | healthy | rc3 gates caller + later re-pin |
+| [beaconry #81](https://github.com/bboortz/beaconry/pull/81) | beaconry | First gates caller install |
+| [HRC #46/#48/#50/#51](https://github.com/bboortz/ham-radio-compass/pull/51) | HRC | 4 rc-chase re-pins |
+| **[HRC #47](https://github.com/bboortz/ham-radio-compass/pull/47) (synthetic canary)** | **HRC** | **AUTO-MERGED by `app/github-actions` (merge commit `d0524d48`)** after rc6 unlocked the immediate-merge path |
+
+### Bug-chase through the rc3→rc6 cycle
+
+Each rc exposed one bug that only a live run could find; the 44/0→45/0 test suite plus the escalation issue #49 proved the paths worked even when they failed:
+
+| rc | Bug | Fix |
+|---|---|---|
+| rc3 | `workflow_run: [shepherd, "*"]` fired on push events with `pull_requests=[]` → `pr_number=0` → `gh pr view 0` errored | rc4 drop workflow_run from part-1 scope; add PR_NUMBER=0 guard |
+| rc4 | HRC's pre-SH-009 `.shepherd.yml` had none of the schema v1 fields; `grep | head | sed` pipeline exited 1 under `set -euo pipefail` | rc5 wrap `grep` in `{ ... || true; }` so defaults apply |
+| rc5 | `scan-not-worse.sh` used `<(...)` process substitution with `#!/bin/sh` shebang; Ubuntu's `/bin/sh` is `dash` | rc6 `#!/bin/bash` |
+| rc6 | Gates reusable workflow had `contents: read`; when PR is CLEAN, `gh pr merge --auto` performs `mergePullRequest` directly which needs `contents: write` | (final) `contents: write` on the gates workflow |
+
+### Side-proof — escalation path verified end-to-end
+
+The rc4→rc5 interval caught `scan-not-worse.sh`'s dash crash, which the gates workflow's `escalate()` helper correctly converted into [needs-human issue #49 on HRC](https://github.com/bboortz/ham-radio-compass/issues/49). Even though the finding was a false positive, the full chain (gate failure → `open-needs-human.sh` → `gh issue create` with dedupe title) was proven in production. Issue closed after the fix landed.
+
+### SH-009 is complete
+
+All four §12 auto-merge gates are **active on the agent flow**:
+- `gate.diff-size` (SH-004 + SH-009)
+- `gate.pipelines-green` (SH-009 part 1)
+- `gate.scan-not-worse` (SH-009 part 2)
+- `gate.security-fix-removes-finding` (SH-009 part 2, strict)
+
+Plus `escalation.needs-human-issue`, `escalation.dedupe`, and `onboarding.dry-run-first` all flipped `design → active`.
+
+### Original part 2 scope (now shipped)
 
 - `gate.scan-not-worse` — new `scripts/shepherd-poc/scan-not-worse.sh` doing Trivy base-vs-PR diff; dedupe by `(package, cve, ghsa_id)`.
 - `scripts/shepherd-poc/open-needs-human.sh` — on gate failure, open (or comment on existing) a needs-human issue; dedupe by `(package, cve, gate)`.
