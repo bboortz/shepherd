@@ -149,17 +149,26 @@ jobs:
           fi
 
           # --- Read .shepherd.yml knobs (flat-scalar parse) ----------------
+          # Tolerant of missing keys: `grep` returning 1 doesn't kill the
+          # pipeline (|| true), so `${var:=default}` always applies cleanly.
+          # This makes the gates workflow forward-compatible with managed
+          # repos whose .shepherd.yml predates the SH-009 schema v1.
           cfg=head/.shepherd.yml
           get_scalar() {
-            grep -E "^[[:space:]]*$1:" "$cfg" | head -1 \
+            { grep -E "^[[:space:]]*$1:" "$cfg" 2>/dev/null || true; } \
+              | head -1 \
               | sed -E 's/^[[:space:]]*[a-z_]+:[[:space:]]*//; s/[[:space:]]*#.*$//; s/^"//; s/"$//'
+          }
+          grep_true_false() {
+            { grep -E "^[[:space:]]+$1:" "$cfg" 2>/dev/null || true; } \
+              | head -1 | grep -Eo '(true|false)' || true
           }
           max_diff_lines=$(get_scalar max_diff_lines); : "${max_diff_lines:=50}"
           monitored=$(get_scalar monitored_pipelines); : "${monitored:=all}"
           rescan_scope=$(get_scalar rescan_scope);     : "${rescan_scope:=high_critical}"
-          auto_merge_patch=$(grep -E '^[[:space:]]+patch:' "$cfg" | head -1 | grep -Eo '(true|false)' || echo true)
-          auto_merge_minor=$(grep -E '^[[:space:]]+minor:' "$cfg" | head -1 | grep -Eo '(true|false)' || echo true)
-          auto_merge_major=$(grep -E '^[[:space:]]+major:' "$cfg" | head -1 | grep -Eo '(true|false)' || echo false)
+          auto_merge_patch=$(grep_true_false patch); : "${auto_merge_patch:=true}"
+          auto_merge_minor=$(grep_true_false minor); : "${auto_merge_minor:=true}"
+          auto_merge_major=$(grep_true_false major); : "${auto_merge_major:=false}"
           echo "config: max_diff_lines=$max_diff_lines monitored=$monitored rescan_scope=$rescan_scope auto_merge=$auto_merge_patch/$auto_merge_minor/$auto_merge_major"
 
           # --- gate.diff-size ---------------------------------------------
