@@ -8,6 +8,14 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: live auto-merge canary on HRC (SH-009 close-out), SH-008 (sandbox perimeter), SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+## [v0.6.0-rc5] — 2026-11-21 — SH-009 part 2 bugfix: scan-not-worse.sh shebang
+
+### Fixed
+
+- `scripts/shepherd-poc/scan-not-worse.sh` used `<(...)` process substitution with `#!/bin/sh`. On Ubuntu runners, `/bin/sh` is `dash`, which doesn't support process substitution → runtime syntax error. Local tests passed because my dev shell's `/bin/sh` is bash. Surfaced on [HRC canary run 44948452810](https://github.com/bboortz/ham-radio-compass/actions/runs/44948452810) — `./_shepherd/scripts/shepherd-poc/scan-not-worse.sh: 59: Syntax error: "(" unexpected`.
+- Fix: switched shebang to `#!/bin/bash`. The rest of the script is POSIX-compatible but the `comm <(a) <(b)` pattern is the cleanest way to diff two sorted streams.
+- Side effect caught by the fix: the gates workflow's `escalate()` helper was triggered by this crash and correctly opened [needs-human issue #49 on HRC](https://github.com/bboortz/ham-radio-compass/issues/49) — proving the escalation path works end-to-end. Issue closed as false-positive after the fix.
+
 ## [v0.6.0-rc4] — 2026-11-21 — SH-009 part 2 bugfix: tolerant .shepherd.yml parsing
 
 ### Fixed

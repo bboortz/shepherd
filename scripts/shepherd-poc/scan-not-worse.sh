@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # scan-not-worse.sh — diff two Trivy findings JSONs; fail if the PR adds new
 # vulnerabilities at the monitored severity vs. the base.
 #
