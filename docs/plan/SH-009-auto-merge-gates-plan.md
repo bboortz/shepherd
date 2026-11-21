@@ -105,4 +105,20 @@ Part 2 (follow-up ship): scan-not-worse, needs-human, dry-run, beaconry + HRC ro
 
 ## Post-merge notes
 
-<Filled after part-1 PR merges and the healthy canary fires a test PR through the gates.>
+### Part 1 (2026-11-21)
+
+| PR | Repo | What |
+|---|---|---|
+| [shepherd #11](https://github.com/bboortz/shepherd/pull/11) | shepherd | v0.6.0-rc1 — reusable gates workflow + caller template + gate-diff-size.sh + schema v1 + labels. 31/0 red test. |
+| [healthy #20](https://github.com/bboortz/healthy/pull/20) | healthy | Adds gates caller SHA-pinned to shepherd@dc939b6. |
+
+**Canary wiring verified**: on healthy #20 (a human PR with no `shepherd-agent` label), the gates workflow fired and correctly reported `gates: skipping` — the label-filter in the caller workflow works as designed. A labelled test PR + actual auto-merge demonstration lands with SH-009 part 2 along with the beaconry + HRC rollout.
+
+### Part 2 scope (not yet shipped)
+
+- `gate.scan-not-worse` — new `scripts/shepherd-poc/scan-not-worse.sh` doing Trivy base-vs-PR diff; dedupe by `(package, cve, ghsa_id)`.
+- `scripts/shepherd-poc/open-needs-human.sh` — on gate failure, open (or comment on existing) a needs-human issue; dedupe by `(package, cve, gate)`.
+- Strict `gate.security-fix-removes-finding` — verify the HIGH/CRITICAL named in the finding is absent from the re-scan.
+- `.shepherd.yml → dry_run: true` → `open-pr.sh` posts a comment-only PR summary instead of opening a merging PR. Closes `onboarding.dry-run-first`.
+- Caller-side `shepherd-gates.yml` on `bboortz/beaconry` and `bboortz/ham-radio-compass`.
+- Live auto-merge canary on HRC: produce a real shepherd-agent PR with 3-line package.json bump, observe all gates pass, PR auto-merges.
