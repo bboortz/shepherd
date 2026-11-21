@@ -170,6 +170,17 @@ Dependabot also opened fresh PRs on `beaconry` (10), `healthy` (4), `shepherd` (
 
 GitHub's "automated-security-fixes" setting created PRs #25 / #26 on `ham-radio-compass` before any `.github/dependabot.yml` existed. After the config landed, Dependabot flagged those PRs as "created from a dependabot.yml entry that has been deleted" and asked for them to be closed. On close, Dependabot did **not** auto-recreate them from the new config (the alerts #50 for `ws` and #56 for `@babel/core` are still open). Switching `interval: weekly` → `daily` in #36 did not immediately re-trigger. Expected resolution: Dependabot's next scheduled scan will reopen them, at which point the auto-merge workflow will fire with the patch-level + ≤50 lockfile-exempt + ≥24h-release gates satisfied.
 
+### Bugs surfaced by the beaconry opt-in (same-day)
+
+Flipping `bboortz/beaconry` to `auto_merge: true` surfaced two latent bugs in `templates/dependabot-automerge.yml` that never fired on `ham-radio-compass` because every PR there was a major bump (short-circuited before the broken code). Both fixed; test coverage widened.
+
+| # | Bug | Surfaced on | Fix | Ships in |
+|---|---|---|---|---|
+| 1 | `gh pr view "$PR_NUMBER"` / `gh pr merge "$PR_NUMBER"` had no git checkout and no `-R` — `gh` crashed with `fatal: not a git repository`. | First patch/minor PR to pass the bump-level gate (pytest 9.0.3→9.2.0, beaconry) | `REPO: ${{ github.repository }}` env + `-R "$REPO"` on both calls. Test asserts no bare `gh pr view/merge` in the template. | v0.3.2 ([PR #7](https://github.com/bboortz/shepherd/pull/7)) |
+| 2 | jq `test("...\.json...")` crashed — jq string literals reject `\.` as an invalid escape. | First PR to reach the diff-size gate (same pytest PR, after bug #1 was fixed) | Change `\.` → `\\.` in LOCK_RE so jq's regex engine receives a literal `.`. Test runs the extracted LOCK_RE through `jq` against a fixture. | v0.3.3 (`8859c1e`) |
+
+Both fixes were re-copied into `beaconry` and `ham-radio-compass` (even though HRC's workflow was latent — preemptive, since the first patch/minor PR there would've hit the same bugs).
+
 ### Follow-ups promoted to IDEAS.md
 
 - **Grouped Dependabot PR title parsing** — the current title regex expects `Bump <name> from X.Y.Z to A.B.C`; grouped PRs ship as `Bump <a> and <b>`. Classifying from PR body or per-file manifest diff would unblock them.
