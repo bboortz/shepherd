@@ -4,7 +4,12 @@ Not-yet-promoted ideas. New ideas land here immediately, even if we won't pick t
 
 ## Promoted
 
-- **[SH-001](../stories/SH-001-retire-renovate.md) — Retire Renovate; add `shepherd-bump` for GitHub Actions.** Status: draft (2026-11-21).
+- **[SH-001](../stories/SH-001-retire-renovate.md) — Retire Renovate; add `shepherd-bump --list` for GitHub Actions.** Status: in-progress → shipping as v0.1.0 (2026-11-21). Scope narrowed to `--list` + Renovate removal. `--check` and `--pr` promoted to SH-002 and SH-003 below.
+
+## shepherd-bump — split from SH-001
+
+- **SH-002 — `shepherd-bump --check` (upstream resolution).** Query `GET /repos/{owner}/{repo}/tags`; dereference annotated tags to commit SHAs; pick highest patch within current major; detect orphaned pins (upstream tag force-pushed or deleted) and open a needs-human issue instead of rewriting. Needs HTTP + JSON support in Zig 0.17.1 (`std.Io.net` + `std.json`), or shell-out to `gh api`. Delivers: `bump.stay-within-major`, `bump.orphaned-pin-detection`, the "upstream resolution" half of `bump.gh-actions` / `bump.sha-pin`.
+- **SH-003 — `shepherd-bump --pr` (write + open PR).** For each bumpable dep found by `--check`, write a single-line patch, commit on a branch, push, open a PR against `dev`, label `shepherd-bump` + `gh-actions`. Needs `SHEPHERD_BUMP_TOKEN` secret (fine-grained PAT; contents+pull-requests+issues write). Delivers: `bump.open-pr-grouped`.
 
 ## Open from DESIGN.md §13
 

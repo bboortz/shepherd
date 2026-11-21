@@ -1,12 +1,14 @@
 ---
 id: SH-001
 slug: retire-renovate
-status: draft
+status: in-progress
 created: 2026-11-21
 owner: @benni
 ---
 
 # SH-001 — Retire Renovate; add shepherd-bump for GitHub Actions
+
+> **Scope note (2026-11-21):** This story has been narrowed to ship an MVP. Its acceptance now covers Scenarios 1 and 2 (Renovate removed + `--list` discovery). The network-dependent scenarios — upstream-tag resolution, annotated-tag dereference, orphan detection, major-bump refusal, PR opening — are scoped to **SH-002** (`shepherd-bump --check`) and **SH-003** (`shepherd-bump --pr`). See `docs/plan/IDEAS.md`.
 
 ## 1. Who is the consumer?
 
@@ -82,6 +84,8 @@ Mechanically checkable outcomes:
 
 ## 8. Acceptance (Gherkin → test assertions)
 
+In scope for SH-001 (shipped as `test/acceptance/test_SH_001_retire_renovate.sh`):
+
 ```gherkin
 Scenario: Renovate removed from the scaffold
   Given the shepherd repo at this commit
@@ -92,52 +96,40 @@ Scenario: Renovate removed from the scaffold
   And   .github/workflows/bump.yml exists
   And   bump.yml schedules shepherd-bump on cron
 
-Scenario: shepherd-bump discovers pinned actions
-  Given .github/workflows/x.yml contains "uses: actions/checkout@abc  # v4.4.0"
-  When  ./bin/shepherd-bump --ecosystem gh-actions --dry-run runs
+Scenario: shepherd-bump discovers pinned actions (--list)
+  Given .github/workflows/*.yml contain `uses: owner/repo@<40-hex>  # vX.Y.Z` lines
+  When  ./bin/shepherd-bump --list --root . runs
   Then  it exits 0
-  And   its stdout lists "actions/checkout" at commit "abc" as "v4.4.0"
+  And   its stdout lists every pinned action as <file>\t<owner>/<repo>\t<sha>\t<version>
+  And   no SHA field is non-40-hex
+  And   no line references renovatebot/github-action
 
-Scenario: shepherd-bump opens a PR for a newer patch within major
-  Given .github/workflows/x.yml contains "uses: actions/checkout@<old>  # v4.4.0"
-  And   actions/checkout has released v4.4.1 at commit <new>
-  When  ./bin/shepherd-bump --ecosystem gh-actions runs
-  Then  a PR is opened against the dev branch
-  And   the PR replaces that line with "uses: actions/checkout@<new>  # v4.4.1"
-  And   the PR has labels "shepherd-bump" and "gh-actions"
-
-Scenario: annotated tag resolves to commit SHA
-  Given upstream has annotated tag v4.4.1 whose tag-object SHA ≠ commit SHA
-  When  shepherd-bump resolves v4.4.1
-  Then  it writes the commit SHA (not the tag-object SHA) into the workflow
-
-Scenario: orphaned pin opens a needs-human issue, no silent rewrite
-  Given .github/workflows/x.yml contains "uses: foo/bar@abc  # v1.0.0"
-  And   foo/bar has no tag resolving to commit abc (force-pushed or deleted)
-  When  shepherd-bump runs
-  Then  no PR is opened for foo/bar
-  And   a needs-human issue is opened titled "orphaned pin: foo/bar@abc"
-  And   shepherd-bump exits 2
-
-Scenario: major-version bump refused by default
-  Given .github/workflows/x.yml contains "uses: actions/checkout@<sha>  # v4.4.0"
-  And   actions/checkout has released v5.0.0
-  When  shepherd-bump runs without --promote-major
-  Then  no PR is opened for a v4→v5 move
-  And   if v4.4.1 exists, that bump is opened instead
+Scenario: --list fails cleanly on a missing root
+  When  ./bin/shepherd-bump --list --root /nonexistent-path runs
+  Then  it exits 1 (not panic)
 ```
 
-The acceptance test's exact location (`test/acceptance/SH-001.sh` vs. Zig test binary) is decided in the plan.
+Deferred to [SH-002](../stories/SH-002-shepherd-bump-check.md) and [SH-003](../stories/SH-003-shepherd-bump-pr.md) (see `docs/plan/IDEAS.md` for the current form):
+
+- Upstream-tag resolution + highest-in-major selection (`--check`).
+- Annotated tag → commit SHA dereference.
+- Orphaned-pin detection + needs-human issue.
+- `--promote-major` opt-in.
+- PR opening (`--pr`).
 
 ## 9. Capabilities delivered or extended
 
-- `supply-chain.no-third-party-actions-critical-path` — new trust-boundary invariant.
-- `supply-chain.first-party-bump-engine` — shepherd operates its own bump path end-to-end.
-- `bump.gh-actions` — read `uses: owner/repo@<sha>` lines across `.github/workflows/*.yml` and resolve to commit SHA within current major.
-- `bump.sha-pin` — write a commit SHA, never a tag or tag-object SHA.
-- `bump.stay-within-major` — default behaviour is latest patch within the current major.
-- `bump.open-pr-grouped` — one PR per bumpable dep, or grouped per ecosystem per schedule (decided in the plan).
-- `bump.orphaned-pin-detection` — detect orphaned pins; open needs-human; never silently rewrite.
+Delivered by SH-001 MVP:
+
+- `supply-chain.no-third-party-actions-critical-path` — Renovate is gone from the fleet workflow; invariant is now mechanically enforced by the acceptance test (`renovatebot/` absence).
+- `supply-chain.first-party-bump-engine` — shepherd owns the discovery path (`shepherd-bump --list`).
+- `bump.gh-actions` (discovery half) — read `uses: owner/repo@<sha>` lines across `.github/workflows/*.yml` and `.github/actions/**/action.yml`.
+- `bump.sha-pin` (output invariant) — `--list` only reports 40-hex SHA pins; non-pinned refs are skipped.
+
+Deferred to SH-002 / SH-003:
+
+- `bump.gh-actions` (upstream resolution half).
+- `bump.stay-within-major`, `bump.open-pr-grouped`, `bump.orphaned-pin-detection`.
 
 New CAP ids are added to `docs/CAPABILITIES.md` in the same PR. Every CAP will need a bidirectional link to its acceptance test once the harness lands.
 

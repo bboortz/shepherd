@@ -1,44 +1,68 @@
 # shepherd — top-level Makefile.
 # See memory/workflow.md for the full gate matrix. Gates grow with releases.
 #
-#   make check                 # all locally runnable gates
-#   make yaml-lint             # yamllint .
-#   make md-lint               # markdownlint on *.md
-#   make verify-memory-size    # memory/*.md and CLAUDE.md ≤ 150 lines
-#   make verify-traceability   # (stub until the Action lands in R1)
+#   make build                 # compile bump.zig → bin/shepherd-bump
+#   make test                  # run the acceptance suite
+#   make test-acceptance       # same, direct target
+#   make check                 # yaml-lint + md-lint + verify-memory-size + build + test
+#   make clean                 # remove build artefacts
 
+ZIG           ?= zig
 YAMLLINT      ?= yamllint
 MARKDOWNLINT  ?= markdownlint-cli2
 MEMORY_LINE_LIMIT ?= 150
 
 MEMORY_FILES := $(wildcard memory/*.md) CLAUDE.md
+ACCEPTANCE_TESTS := $(wildcard test/acceptance/test_SH_*.sh)
+BUMP := bin/shepherd-bump
 
-.PHONY: help check yaml-lint md-lint verify-memory-size \
+.PHONY: help build test test-acceptance check yaml-lint md-lint verify-memory-size \
         verify-traceability verify-version-bumped verify-changelog \
         install-hooks clean
 
 help:
 	@echo "shepherd targets:"
-	@echo "  check               yaml-lint + md-lint + verify-memory-size (+ future gates)"
+	@echo "  build               compile bump.zig → $(BUMP)"
+	@echo "  test                alias for test-acceptance"
+	@echo "  test-acceptance     run every test/acceptance/test_SH_*.sh"
+	@echo "  check               yaml-lint + md-lint + verify-memory-size + build + test"
 	@echo "  yaml-lint           $(YAMLLINT) ."
 	@echo "  md-lint             $(MARKDOWNLINT) '**/*.md'"
 	@echo "  verify-memory-size  memory/*.md and CLAUDE.md each ≤ $(MEMORY_LINE_LIMIT) lines"
+	@echo "  clean               remove .zig-cache/ and bin/"
 	@echo ""
-	@echo "Stubs (become real with Release 1):"
+	@echo "Stubs (grow in follow-up stories):"
 	@echo "  verify-traceability    story ↔ plan ↔ test ↔ CAP enforcement"
 	@echo "  verify-version-bumped  VERSION differs from origin/main:VERSION"
 	@echo "  verify-changelog       CHANGELOG.md has '## [v\$$(cat VERSION)]' entry"
 	@echo "  install-hooks          activate commit-msg + pre-commit + pre-push"
-	@echo ""
-	@echo "Variables: YAMLLINT=$(YAMLLINT) MARKDOWNLINT=$(MARKDOWNLINT) MEMORY_LINE_LIMIT=$(MEMORY_LINE_LIMIT)"
 
-check: yaml-lint md-lint verify-memory-size
+build: $(BUMP)
+
+$(BUMP): bump.zig build.zig
+	$(ZIG) build --prefix .
+
+test: test-acceptance
+
+test-acceptance: build
+	@fail=0; \
+	for t in $(ACCEPTANCE_TESTS); do \
+	  echo "→ $$t"; \
+	  "$$t" || fail=1; \
+	done; \
+	exit $$fail
+
+check: yaml-lint md-lint verify-memory-size build test-acceptance
 
 yaml-lint:
 	$(YAMLLINT) .
 
 md-lint:
-	$(MARKDOWNLINT) '**/*.md'
+	@if command -v $(MARKDOWNLINT) >/dev/null 2>&1; then \
+	  $(MARKDOWNLINT) '**/*.md'; \
+	else \
+	  echo "md-lint: $(MARKDOWNLINT) not installed — skipping"; \
+	fi
 
 verify-memory-size:
 	@fail=0; \
@@ -53,16 +77,16 @@ verify-memory-size:
 	exit $$fail
 
 verify-traceability:
-	@echo "verify-traceability: stub — lands with Release 1 (the Action + first SH-NNN stories)"
+	@echo "verify-traceability: stub — lands in a follow-up SH story"
 
 verify-version-bumped:
-	@echo "verify-version-bumped: stub — lands with Release 1"
+	@echo "verify-version-bumped: stub — lands in a follow-up SH story"
 
 verify-changelog:
-	@echo "verify-changelog: stub — lands with Release 1"
+	@echo "verify-changelog: stub — lands in a follow-up SH story"
 
 install-hooks:
-	@echo "install-hooks: stub — lands with Release 1 (pre-commit framework: commit-msg + pre-commit + pre-push)"
+	@echo "install-hooks: stub — lands in a follow-up SH story (pre-commit framework)"
 
 clean:
-	@echo "Nothing to clean yet (no build outputs)."
+	rm -rf .zig-cache bin
