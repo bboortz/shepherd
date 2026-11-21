@@ -8,7 +8,8 @@ This file is the fleet registry until the fleet layer activates after Release 3.
 
 | Repo | Release line | Onboarded | Owner | Notes |
 |---|---|---|---|---|
-| [`bboortz/healthy`](https://github.com/bboortz/healthy) | R0 (pilot) | 2026-11-21 | @benni | Target of the sandboxed-agent POC (`docs/DESIGN.md §13 Release 0`). Scheduled: Fri 27 Nov 2026. |
+| [`bboortz/healthy`](https://github.com/bboortz/healthy) | R0 (pilot 1) | 2026-11-21 | @benni | First R0 pilot ([HC-008](https://github.com/bboortz/healthy/blob/main/docs/stories/HC-008-shepherd-poc.md)). Zig single file, zero deps → Trivy finds nothing; first dispatch green against the "no findings" exit path. |
+| [`bboortz/beaconry`](https://github.com/bboortz/beaconry) | R0 (pilot 2) | 2026-11-21 | @benni | Second R0 pilot ([BC-145](https://github.com/bboortz/beaconry/blob/main/docs/stories/BC-145-shepherd-poc.md)). Python + Docker — real dependency surface so the agent-fix path gets real exercise. Cron offset 30 min from healthy. |
 
 ## Archived
 
