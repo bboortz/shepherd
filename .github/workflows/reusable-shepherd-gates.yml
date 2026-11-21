@@ -257,6 +257,59 @@ jobs:
             fi
           fi
 
+          # --- gate.waiting-period (SH-010) ------------------------------
+          # Config: gates.waiting_period_hours (default 24; 0 disables).
+          wph=$(get_scalar waiting_period_hours); : "${wph:=24}"
+          if [ "$wph" = "0" ]; then
+            echo "::notice::gate.waiting-period: disabled (gates.waiting_period_hours=0)"
+          else
+            intent_file=head/.shepherd-intent.json
+            if [ ! -s "$intent_file" ]; then
+              echo "$intent_file missing or empty on shepherd-agent PR — agent-call.sh drift?" > /tmp/sh-009/ctx
+              escalate waiting-period "shepherd-agent PR has no .shepherd-intent.json; cannot evaluate waiting-period" /tmp/sh-009/ctx
+            fi
+            if ! jq -e '.ecosystem and .package and .from and .to' "$intent_file" >/dev/null 2>&1; then
+              jq -c . "$intent_file" > /tmp/sh-009/ctx 2>/dev/null || true
+              escalate waiting-period "intent file malformed (missing ecosystem/package/from/to)" /tmp/sh-009/ctx
+            fi
+            eco=$(jq -r .ecosystem "$intent_file")
+            pkg=$(jq -r .package "$intent_file")
+            to=$(jq -r .to "$intent_file")
+
+            set +e
+            released_at=$(./_shepherd/scripts/shepherd-poc/age-of-release.sh "$eco" "$pkg" "$to" 2>/tmp/sh-009/age-err)
+            age_rc=$?
+            set -e
+
+            case "$age_rc" in
+              0)
+                released_epoch=$(date -d "$released_at" +%s 2>/dev/null || echo 0)
+                now_epoch=$(date +%s)
+                age_hours=$(( (now_epoch - released_epoch) / 3600 ))
+                echo "gate.waiting-period: $eco::$pkg@$to released=$released_at age_hours=$age_hours cap=$wph"
+                if [ "$age_hours" -lt "$wph" ]; then
+                  remaining=$(( wph - age_hours ))
+                  printf 'released=%s\nage_hours=%s\ncap=%s\nremaining=%s\n' "$released_at" "$age_hours" "$wph" "$remaining" > /tmp/sh-009/ctx
+                  escalate waiting-period "release is $age_hours h old (<$wph h); $remaining h remaining — will re-fire naturally" /tmp/sh-009/ctx
+                fi
+                ;;
+              2)
+                echo "::warning::gate.waiting-period: age-of-release.sh exit 2 — version not found on $eco registry"
+                cat /tmp/sh-009/age-err >&2 || true
+                echo "version $pkg@$to not found on $eco registry" > /tmp/sh-009/ctx
+                escalate waiting-period "age-of-release.sh could not resolve $eco::$pkg@$to" /tmp/sh-009/ctx
+                ;;
+              3)
+                # Fail-open on unknown ecosystem per SH-010 story §3.
+                echo "::warning::gate.waiting-period: unknown ecosystem '$eco' — skipping gate (fail-open)"
+                ;;
+              *)
+                echo "::warning::gate.waiting-period: age-of-release.sh unexpected exit $age_rc — skipping gate"
+                cat /tmp/sh-009/age-err >&2 || true
+                ;;
+            esac
+          fi
+
           # --- Auto-merge opt-in check ------------------------------------
           # Part-2 placeholder: use "patch" semantics. Explicit bump-level
           # classification from the agent lands in a follow-up ship.

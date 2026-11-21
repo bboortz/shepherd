@@ -30,6 +30,7 @@ gates:
   monitored_pipelines: all
   max_diff_lines: 50
   rescan_scope: high_critical   # high_critical | all
+  waiting_period_hours: 24      # 0 disables gate.waiting-period (SH-010)
 
 dry_run: false
 
