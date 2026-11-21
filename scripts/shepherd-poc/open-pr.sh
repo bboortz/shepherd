@@ -80,16 +80,49 @@ See [bboortz/shepherd SH-004](https://github.com/bboortz/shepherd/blob/main/docs
 EOF
 )
 
-# Collect the desired labels that actually exist in this repo; gh pr create
-# aborts if any --label value is missing. Not every pilot repo has
-# shepherd-poc / needs-review — tolerate that.
+# SH-009: `shepherd-agent` label is the signal the gates workflow filters on.
+# Try to auto-create it (and `shepherd-security-fix`) if absent; tolerate
+# failure so pre-SH-009 pilots keep working.
+#
+# `shepherd-security-fix` is applied only when the originating Trivy finding
+# contained a HIGH or CRITICAL severity vuln. The gates workflow then
+# requires `gate.security-fix-removes-finding` to pass before merging.
 existing_labels=$(gh label list --limit 100 --json name --jq '.[].name' 2>/dev/null || true)
+
+ensure_label() {
+  name=$1; color=$2; desc=$3
+  if printf '%s\n' "$existing_labels" | grep -Fxq "$name"; then return 0; fi
+  if gh label create "$name" --color "$color" --description "$desc" >/dev/null 2>&1; then
+    existing_labels="$existing_labels
+$name"
+    echo "→ created missing label '$name'"
+  else
+    echo "→ could not create label '$name'; skipping (not fatal)"
+  fi
+}
+
+ensure_label shepherd-agent      0e8a16 "Opened by shepherd-poc agent; SH-009 gates evaluate on this label"
+ensure_label shepherd-poc        c2e0c6 "Shepherd Release 0 POC — agent-produced PR"
+ensure_label needs-review        d93f0b "Awaiting human review before merge"
+
+# Security-fix label only applied when the originating finding is HIGH/CRITICAL.
+# FINDINGS_PATH is set by agent-call.sh; tolerate it being absent (e.g. replay runs).
+is_security_fix=false
+if [ -n "${FINDINGS_PATH:-}" ] && [ -s "${FINDINGS_PATH:-/dev/null}" ]; then
+  if jq -e '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length > 0' "$FINDINGS_PATH" >/dev/null 2>&1; then
+    is_security_fix=true
+    ensure_label shepherd-security-fix b60205 "Shepherd fix for a HIGH/CRITICAL finding; stricter gates apply"
+  fi
+fi
+
 label_args=""
-for want in shepherd-poc needs-review; do
+want_labels="shepherd-agent shepherd-poc needs-review"
+if [ "$is_security_fix" = "true" ]; then
+  want_labels="$want_labels shepherd-security-fix"
+fi
+for want in $want_labels; do
   if printf '%s\n' "$existing_labels" | grep -Fxq "$want"; then
     label_args="$label_args --label $want"
-  else
-    echo "→ label '$want' not found in repo; skipping (create it with: gh label create $want -R \$REPO)"
   fi
 done
 

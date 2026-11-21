@@ -1,0 +1,182 @@
+---
+# Shepherd auto-merge gates (SH-009 R1-C). Called by managed repos via:
+#
+#   jobs:
+#     gates:
+#       uses: bboortz/shepherd/.github/workflows/reusable-shepherd-gates.yml@<sha>
+#
+# Evaluates shepherd-agent-labelled PRs. Part 1 gates (this file):
+#   - gate.diff-size                  (non-lockfile line count ≤ max_diff_lines)
+#   - gate.pipelines-green            (every monitored pipeline is success)
+#   - gate.security-fix-removes-finding  (partial: label-trust; strict check in part 2)
+#
+# Part 2 will add: gate.scan-not-worse + needs-human issue dedupe + dry-run.
+#
+# When all gates pass and the repo has opted into auto_merge, enables
+# `gh pr merge --auto --merge`. Always exits 0; decisions encoded as
+# ::notice:: annotations (same pattern as SH-011 dependabot-automerge).
+
+name: reusable-shepherd-gates
+
+"on":
+  workflow_call:
+    inputs:
+      pr_number:
+        description: "PR number (required for workflow_run trigger from caller)"
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ inputs.pr_number }}
+      REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Checkout shepherd scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: bboortz/shepherd
+          ref: ${{ github.job_workflow_sha }}
+          path: _shepherd
+
+      - name: Verify .shepherd.yml present
+        run: ./_shepherd/scripts/shepherd-poc/verify-shepherd-yml.sh .
+
+      - name: Evaluate gates + enable auto-merge
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          decision() { echo "::notice::auto-merge decision: $1"; exit 0; }
+
+          # --- Inspect the PR -------------------------------------------
+          PR_JSON=$(gh pr view "$PR_NUMBER" -R "$REPO" --json number,labels,additions,deletions,headRefName,headRefOid,files)
+          labels=$(echo "$PR_JSON" | jq -r '.labels[].name')
+          head_sha=$(echo "$PR_JSON" | jq -r '.headRefOid')
+
+          # Only act on shepherd-agent PRs.
+          if ! echo "$labels" | grep -Fxq 'shepherd-agent'; then
+            decision "PR #$PR_NUMBER not labelled shepherd-agent — not for this workflow"
+          fi
+
+          # Escape hatch — any shepherd-hold label stops auto-merge.
+          if echo "$labels" | grep -Fxq 'shepherd-hold'; then
+            decision "shepherd-hold label present — leaving PR open"
+          fi
+
+          # --- Read .shepherd.yml knobs ---------------------------------
+          # Permissive yq-less parse: pull simple scalar lines. SH-009 part 1
+          # supports flat keys only; a real YAML parser can land with SH-013.
+          cfg=.shepherd.yml
+          get_scalar() {
+            grep -E "^[[:space:]]*$1:" "$cfg" | head -1 \
+              | sed -E 's/^[[:space:]]*[a-z_]+:[[:space:]]*//; s/[[:space:]]*#.*$//; s/^"//; s/"$//'
+          }
+
+          max_diff_lines=$(get_scalar max_diff_lines)
+          : "${max_diff_lines:=50}"
+          monitored=$(get_scalar monitored_pipelines)
+          : "${monitored:=all}"
+          auto_merge_patch=$(grep -E '^[[:space:]]+patch:' "$cfg" | head -1 | grep -Eo '(true|false)' || echo true)
+          auto_merge_minor=$(grep -E '^[[:space:]]+minor:' "$cfg" | head -1 | grep -Eo '(true|false)' || echo true)
+          auto_merge_major=$(grep -E '^[[:space:]]+major:' "$cfg" | head -1 | grep -Eo '(true|false)' || echo false)
+
+          echo "config: max_diff_lines=$max_diff_lines monitored=$monitored auto_merge(patch/minor/major)=$auto_merge_patch/$auto_merge_minor/$auto_merge_major"
+
+          # --- gate.diff-size -------------------------------------------
+          # Reconstruct the unified diff for the PR, pass through gate-diff-size.sh.
+          mkdir -p /tmp/sh-009
+          gh pr diff "$PR_NUMBER" -R "$REPO" > /tmp/sh-009/pr.diff
+          non_lockfile_lines=$(./_shepherd/scripts/shepherd-poc/gate-diff-size.sh /tmp/sh-009/pr.diff --non-lockfile)
+          echo "gate.diff-size: non-lockfile=$non_lockfile_lines cap=$max_diff_lines"
+          if [ "$non_lockfile_lines" -gt "$max_diff_lines" ]; then
+            decision "gate.diff-size FAIL — $non_lockfile_lines non-lockfile lines exceeds cap $max_diff_lines — leaving PR open"
+          fi
+
+          # --- gate.pipelines-green -------------------------------------
+          # Gate passes when every monitored required-check on the PR head is
+          # terminal-success. monitored=all → every check GitHub reports on the PR.
+          # Otherwise, read the explicit allowlist from monitored_pipelines.
+          # GitHub's check "state" values: SUCCESS / FAILURE / ERROR / PENDING /
+          # NEUTRAL / SKIPPED / CANCELLED / STARTUP_FAILURE / STALE.
+          # Terminal-pass = SUCCESS, NEUTRAL, SKIPPED.
+          gh pr checks "$PR_NUMBER" -R "$REPO" --json name,state --jq '.[] | "\(.name) \(.state)"' > /tmp/sh-009/checks || true
+          echo "pipeline status:"
+          sed 's/^/  /' /tmp/sh-009/checks 2>/dev/null || echo "  (none)"
+
+          if [ ! -s /tmp/sh-009/checks ]; then
+            decision "pipelines not reported yet (PR just opened?) — re-fires on workflow_run"
+          fi
+
+          if [ "$monitored" = "all" ]; then
+            names=$(awk '{print $1}' /tmp/sh-009/checks)
+          else
+            names=$(echo "$monitored" | sed 's/[][,]/ /g')
+          fi
+
+          bad=""
+          for name in $names; do
+            state=$(awk -v n="$name" '$1 == n {print $2; exit}' /tmp/sh-009/checks)
+            if [ -z "$state" ]; then
+              bad="$bad $name=MISSING"
+            elif [ "$state" != "SUCCESS" ] && [ "$state" != "NEUTRAL" ] && [ "$state" != "SKIPPED" ]; then
+              bad="$bad $name=$state"
+            fi
+          done
+
+          if [ -n "$bad" ]; then
+            decision "gate.pipelines-green FAIL/PENDING —$bad — leaving PR open; re-fires on workflow_run"
+          fi
+          echo "gate.pipelines-green: ok"
+
+          # --- gate.security-fix-removes-finding (partial — label-trust) -
+          # Part 1: if PR has shepherd-security-fix label, we trust that the
+          # agent produced a legitimate security fix. Part 2 adds a strict
+          # re-scan verification.
+          if echo "$labels" | grep -Fxq 'shepherd-security-fix'; then
+            echo "gate.security-fix-removes-finding: label present (part 1 trusts label; strict check in part 2)"
+          fi
+
+          # --- gate.scan-not-worse (part 2) -----------------------------
+          # Not implemented in part 1. Documented gap.
+
+          # --- All part-1 gates clear: evaluate auto_merge opt-in -------
+          # Rough semver inference from the PR title (same approach as SH-011
+          # Dependabot workflow). For shepherd-agent PRs the title shape is
+          # "shepherd-poc: automated dependency fix (<timestamp>)" — no version
+          # info. Default to "patch" semantics in part 1; part 2 captures the
+          # bump level from the agent's output explicitly.
+          level=patch
+          if [ "$level" = "patch" ] && [ "$auto_merge_patch" = "false" ]; then
+            decision "patch bump + auto_merge.patch=false — leaving PR open (manual review)"
+          fi
+          if [ "$level" = "minor" ] && [ "$auto_merge_minor" = "false" ]; then
+            decision "minor bump + auto_merge.minor=false — leaving PR open (manual review)"
+          fi
+          if [ "$level" = "major" ] && [ "$auto_merge_major" = "false" ]; then
+            decision "major bump + auto_merge.major=false — leaving PR open (manual review)"
+          fi
+
+          echo "all part-1 gates green — enabling auto-merge"
+          if err=$(gh pr merge "$PR_NUMBER" -R "$REPO" --auto --merge 2>&1); then
+            echo "::notice::auto-merge decision: enabled for PR #$PR_NUMBER"
+          else
+            case "$err" in
+              *"Protected branch rules not configured"*)
+                decision "auto-merge needs branch protection on base; set one required status check, then rebase this PR" ;;
+              *"Pull request is already merged"*)
+                decision "PR already merged (race) — exiting ok" ;;
+              *)
+                echo "::warning::auto-merge enable failed: $err"
+                decision "auto-merge enable failed; see workflow log" ;;
+            esac
+          fi
