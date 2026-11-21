@@ -14,6 +14,9 @@ version: 2
 updates:
   - package-ecosystem: github-actions
     directory: "/"
+    # target-branch: main   # override if your Dependabot PRs should
+    #                       # target an integration branch like `dev`.
+    #                       # Defaults to the repo's default branch.
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
