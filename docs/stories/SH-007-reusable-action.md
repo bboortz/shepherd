@@ -1,8 +1,9 @@
 ---
 id: SH-007
 slug: reusable-action
-status: in-progress
+status: shipped
 created: 2026-11-21
+shipped: 2026-11-21
 owner: @benni
 parent: SH-006
 ---

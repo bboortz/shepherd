@@ -3,7 +3,9 @@ id: SH-007
 slug: reusable-action
 story: docs/stories/SH-007-reusable-action.md
 branch: feat/SH-007-reusable-action
-status: in-progress
+status: shipped
+shipped: 2026-11-21
+merge_commits: ["shepherd #9 (v0.5.0-rc1)", "healthy #18 (canary migration)"]
 ---
 
 # SH-007 plan — R1-A: reusable shepherd Action (required `.shepherd.yml`)
@@ -162,6 +164,35 @@ README is not updated (public contract hasn't launched yet; SH-004/011 docs stil
 | `make injection-drill` still green (no regression in SH-005) | TBD |
 | `make check` green | TBD |
 
-## Post-merge notes
+## Post-merge notes (2026-11-21)
 
-<Filled after the canary dispatch on `bboortz/healthy` completes. Record: step list of the live run, timing, whether a PR was opened, follow-up migrations' blockers.>
+### What shipped
+
+| PR | Repo | Content |
+|---|---|---|
+| [shepherd #9](https://github.com/bboortz/shepherd/pull/9) | shepherd | reusable workflow + caller template + verify-shepherd-yml.sh + red test + CAPs + DESIGN §13 flip. v0.5.0-rc1. |
+| [healthy #18](https://github.com/bboortz/healthy/pull/18) | healthy | Canary migration: 17-line caller SHA-pinned to `bboortz/shepherd@3550c80`; `scripts/shepherd-poc/` deleted. |
+
+### Live canary result
+
+Dispatched [`shepherd-poc.yml` on `bboortz/healthy`](https://github.com/bboortz/healthy/actions/runs/44938249380) at 18:56 UTC. Steps:
+
+| Step | Outcome |
+|---|---|
+| Set up job | ✅ |
+| Checkout caller repo | ✅ |
+| Checkout shepherd scripts (`ref: github.job_workflow_sha`) | ✅ |
+| **Verify `.shepherd.yml` present** | ✅ — `verify-shepherd-yml: OK (./.shepherd.yml)` |
+| Install Trivy (sigstore-verified) | ✅ |
+| Trivy fs scan | ✅ (no HIGH/CRITICAL findings — healthy is clean) |
+| Agent call | ✅ exit 1 — "No findings. Nothing to do." |
+| Validate diff / Setup Node / Regen lockfile / Validate combined / Open PR | ⏭ skipped (rc=1 short-circuit) |
+| Post Checkout shepherd scripts / Post Checkout caller repo / Complete job | ✅ |
+
+**End-to-end result:** the reusable Action successfully runs on a managed repo via a thin caller. The `github.job_workflow_sha` inner-checkout pinning works in practice. The clean-state short-circuit path is intact. No PR opened (correctly — no findings). No regressions vs the pre-migration flow.
+
+### Follow-ups
+
+- **Migrate `beaconry` + `ham-radio-compass`** to the reusable Action. Same pattern as the healthy canary: thin caller SHA-pinned to `bboortz/shepherd@3550c80` + delete `scripts/shepherd-poc/`. Next ship.
+- **Validate the agent-produces-diff path** — the canary ran on a clean repo (rc=1 short-circuit). Still need a run where `rc=0` so the remaining 5 steps actually execute. Easiest: wait for HRC to produce a finding (daily cron at 06:00 UTC) and watch that run. If none within a day, reintroduce one of the known fixed CVEs on a scratch branch of HRC.
+- **R1 release tagging (`v1.0.0`)** — after SH-008 (sandbox), SH-009 (gates), SH-010 (waiting-period) ship. Caller templates will then switch from `@main` / `@<sha>` to `@v1.0.0`.
