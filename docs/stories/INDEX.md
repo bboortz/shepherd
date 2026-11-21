@@ -4,4 +4,4 @@ Status board, grep-friendly. One line per story. Status lifecycle: `draft → re
 
 | ID | Status | Slug | Title |
 |---|---|---|---|
-| SH-001 | in-progress | [retire-renovate](SH-001-retire-renovate.md) | Retire Renovate; add shepherd-bump for GitHub Actions |
+| SH-001 | shipped | [retire-renovate](SH-001-retire-renovate.md) | Retire Renovate; add shepherd-bump for GitHub Actions |

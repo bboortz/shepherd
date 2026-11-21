@@ -3,7 +3,7 @@ id: SH-001
 slug: retire-renovate
 story: docs/stories/SH-001-retire-renovate.md
 branch: feat/SH-001-retire-renovate
-status: in-progress
+status: shipped
 ---
 
 # SH-001 plan — Retire Renovate; add shepherd-bump for GitHub Actions
@@ -148,6 +148,6 @@ Three lenses. Scenarios deferred to SH-002 / SH-003 are marked `deferred`; remai
 | `make check` green (incl. yamllint + md-lint + acceptance) | ✅ |
 | VERSION bumped to 0.1.0; CHANGELOG has the entry | ✅ |
 
-## Post-merge notes
+## Post-merge notes (2026-11-21)
 
-<Filled after the PR merges. One paragraph: what we learned, what bit us, what to carry into the next story — notably SH-002 for npm.>
+Merged as PR #1 (`6a14220`, merge commit). The scope narrow to `--list` + Renovate removal was the right call: shipping a correct MVP in one session with 21/21 green assertions beats a half-wired `--check`/`--pr` that would not have been verifiable. Two things bit during the implementation: (1) Zig 0.17.1 reworked `std.fs` into `std.Io.Dir`/`std.Io.File` with an `Io` instance threaded through every call, and the main signature changed to `fn main(init: std.process.Init) !u8`, so most of the file-I/O scaffold had to be rewritten after the first compile pass; (2) the `--list` binary is 12 MB in debug mode — follow-ups should build with `-O ReleaseSmall` (per healthy's Zig convention) once the engine stabilises. Carry into SH-002: write SHA resolution with a transport-injection seam so the GitHub API path can be mocked in acceptance tests (no network in CI).
