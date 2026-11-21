@@ -1,0 +1,111 @@
+---
+# Shepherd reusable Action (SH-007). Called by managed repos via:
+#
+#   jobs:
+#     agent:
+#       uses: bboortz/shepherd/.github/workflows/reusable-shepherd.yml@<sha>
+#       secrets:
+#         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+#
+# Requires in the caller repo:
+#   - .shepherd.yml at the repo root (SH-007 required-config decision)
+#   - ANTHROPIC_API_KEY secret
+#
+# Runs: verify-shepherd-yml → install-trivy → scan → agent → validate →
+# setup-node → regen-lockfile → validate-combined → open-pr.
+
+name: reusable-shepherd
+
+"on":
+  workflow_call:
+    secrets:
+      ANTHROPIC_API_KEY:
+        description: "Anthropic API key for the sandboxed agent step."
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  shepherd-agent:
+    runs-on: ubuntu-latest
+    env:
+      FINDINGS_PATH: /tmp/findings.json
+      DIFF_PATH: /tmp/diff.patch
+      BASE_BRANCH: main
+    steps:
+      # 1. Caller's repo at the default workspace (so scripts see package.json,
+      #    .shepherd.yml, lockfiles relative to $PWD).
+      - name: Checkout caller repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # 2. Shepherd scripts at _shepherd/. Ref matches this workflow's own
+      #    commit so the scripts can't drift from the workflow definition.
+      #    `github.job_workflow_sha` is provided by GitHub for reusable
+      #    workflow invocations.
+      - name: Checkout shepherd scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: bboortz/shepherd
+          ref: ${{ github.job_workflow_sha }}
+          path: _shepherd
+
+      # 3. SH-007 required-config gate. Fail fast + clear annotation if missing.
+      - name: Verify .shepherd.yml present
+        run: ./_shepherd/scripts/shepherd-poc/verify-shepherd-yml.sh .
+
+      - name: Install Trivy (sigstore-verified)
+        run: ./_shepherd/scripts/shepherd-poc/install-trivy.sh
+
+      - name: Trivy fs scan
+        run: |
+          trivy fs \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --format json \
+            --output "$FINDINGS_PATH" \
+            --exit-code 0 \
+            .
+
+      - name: Agent call
+        id: agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set +e
+          ./_shepherd/scripts/shepherd-poc/agent-call.sh
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          case "$rc" in
+            0) echo "→ Diff produced" ;;
+            1) echo "→ No findings. Nothing to do." ;;
+            2) echo "→ Agent said NO_FIX_POSSIBLE" ;;
+            *) echo "::error::agent-call.sh exit $rc"; exit "$rc" ;;
+          esac
+
+      - name: Validate diff (agent output, manifest-only)
+        if: steps.agent.outputs.rc == '0'
+        run: ./_shepherd/scripts/shepherd-poc/validate.sh "$DIFF_PATH"
+
+      - name: Setup Node.js (needed for regen-lockfile → npm install)
+        if: steps.agent.outputs.rc == '0'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: "20"
+
+      - name: Regenerate lockfile (deterministic — replaces DIFF_PATH)
+        if: steps.agent.outputs.rc == '0'
+        run: ./_shepherd/scripts/shepherd-poc/regen-lockfile.sh
+
+      - name: Validate combined diff (manifest + regenerated lockfile)
+        if: steps.agent.outputs.rc == '0'
+        run: ./_shepherd/scripts/shepherd-poc/validate.sh "$DIFF_PATH"
+
+      - name: Open PR
+        if: steps.agent.outputs.rc == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./_shepherd/scripts/shepherd-poc/open-pr.sh "$DIFF_PATH"

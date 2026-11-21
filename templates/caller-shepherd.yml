@@ -1,0 +1,16 @@
+---
+# Shepherd caller (SH-007). Requires .shepherd.yml at the repo root
+# and ANTHROPIC_API_KEY. Pin @main to a tagged SHA from R1 onward.
+name: shepherd
+"on":
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  agent:
+    uses: bboortz/shepherd/.github/workflows/reusable-shepherd.yml@main
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
