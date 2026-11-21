@@ -58,6 +58,13 @@ jobs:
 
           decision() { echo "::notice::auto-merge decision: $1"; exit 0; }
 
+          # --- Defensive guard: no PR context ---------------------------
+          # Caller passes pr_number=0 for workflow_run events fired by a non-PR
+          # workflow (push/schedule/dispatch). `gh pr view 0` would error; skip.
+          if [ -z "${PR_NUMBER:-}" ] || [ "$PR_NUMBER" = "0" ]; then
+            decision "no PR context (pr_number=0) — likely a workflow_run from a push-triggered workflow; nothing to gate"
+          fi
+
           # --- Inspect the PR -------------------------------------------
           PR_JSON=$(gh pr view "$PR_NUMBER" -R "$REPO" --json number,labels,additions,deletions,headRefName,headRefOid,files)
           labels=$(echo "$PR_JSON" | jq -r '.labels[].name')
