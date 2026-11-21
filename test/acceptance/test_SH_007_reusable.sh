@@ -39,6 +39,9 @@ assert_contains "$REUSABLE" "ANTHROPIC_API_KEY"
 assert_contains "$REUSABLE" "required: true"
 assert_contains "$REUSABLE" "contents: write"
 assert_contains "$REUSABLE" "pull-requests: write"
+# Trivy scan widens: file-patterns for pip variants + deprecated checks.
+assert_contains "$REUSABLE" "--file-patterns 'pip:requirements"
+assert_contains "$REUSABLE" "--include-deprecated-checks"
 # Every `uses:` must reference actions/* and be SHA-pinned (40 hex).
 bad_uses=""
 while IFS= read -r line; do

@@ -35,6 +35,13 @@ One story per ecosystem. Each extends `shepherd-bump` (Zig single-file budget pe
 - **Replace `aquasecurity/trivy-action` with an inline, sigstore-verified Trivy install.** The binary is fine; the Action wrapper is the vector (CVE-2026-33634). Install via `curl` + `cosign verify-blob` of the sigstore bundle in `reusable-verify.yml`. Alternative: switch scanner to osv-scanner or grype entirely. Needs a story.
 - **Lint: refuse mutable action refs.** A gate (`verify-sha-pinned-actions`) that fails CI if any `uses:` line is not a 40-hex SHA. Complement to `shepherd-bump`.
 
+## Scan coverage gaps surfaced on 2026-11-21
+
+Cross-check against `bboortz/homelab` revealed two Trivy coverage gaps. `--file-patterns` fix for pip variants shipped in v0.5.0-rc2; the other two are parked here.
+
+- **R2 candidate — pip-compile-or-fail enforcement.** Trivy's pip analyzer **drops** `requirements.txt` files that use only loose constraints (`fastapi>=0.109.0`, `python-telegram-bot==21.*`) because there's no concrete version to look up. Observed on 4 of 6 docker/* subdirs of homelab. Shepherd currently has no signal for this — the file is silently skipped and the repo looks "clean" when it might have vulnerable transitive deps. Proposal: add a `shepherd-bump --verify-pip-compiled` step (symmetric with `--verify-dependabot`, `--verify-branch-protection`) that detects loose-pin `requirements.txt` files and opens a needs-human issue. R2 scope — needs a well-chosen heuristic (e.g. "≥ 1 non-`==` or wildcard line per file" = loose; a repo-level override for files that are intentionally lax like `requirements-dev.in`).
+- **R2+ candidate — Zig vuln-scan coverage.** Trivy 0.75 has **no Zig analyzer**: `build.zig.zon` isn't in its ecosystem list. `bboortz/shepherd` and `bboortz/healthy` have no vuln-scan signal for Zig deps. Mitigation today: Zig deps on the fleet are few and `build.zig.zon`-hashed (supply chain is tight even if advisories are invisible). Three paths, pick one: (a) wait for Trivy to add Zig support upstream — zero effort, unbounded wait; (b) write a shepherd-side Zig advisory scanner — bounded work but we own the DB; (c) accept the gap and document it in the quickstart's "known limitations" box. Decide before R3.
+
 ## Dependabot flow — follow-ups from SH-011 rollout
 
 Discovered during the 2026-11-21 rollout on `bboortz/ham-radio-compass` + `bboortz/beaconry` (post-merge notes: `docs/plan/SH-011-dependabot-enforce-automerge-plan.md`).

@@ -62,7 +62,15 @@ jobs:
 
       - name: Trivy fs scan
         run: |
+          # --file-patterns: Trivy's pip detector matches only `requirements.txt`
+          # by default; add a regex so `requirements-dev.txt`, `requirements-ui-test.txt`,
+          # etc. are also scanned. Additive to the built-in patterns for all other
+          # ecosystems (npm / Cargo / go.mod / etc. still use their defaults).
+          # --include-deprecated-checks: widen coverage to historical rule/advisory
+          # entries that Trivy has marked deprecated upstream.
           trivy fs \
+            --file-patterns 'pip:requirements.*\.txt$' \
+            --include-deprecated-checks \
             --severity HIGH,CRITICAL \
             --ignore-unfixed \
             --format json \
