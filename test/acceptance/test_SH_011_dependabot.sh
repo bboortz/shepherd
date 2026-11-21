@@ -95,8 +95,9 @@ fi
 assert_contains templates/dependabot-automerge.yml "patch"
 assert_contains templates/dependabot-automerge.yml "minor"
 
-# Release-date lookup: npm + github_actions covered.
+# Release-date lookup: npm + pip + github_actions covered.
 assert_contains templates/dependabot-automerge.yml "registry.npmjs.org"
+assert_contains templates/dependabot-automerge.yml "pypi.org"
 assert_contains templates/dependabot-automerge.yml "releases/tags"
 
 # ----- Scenario 2/3/4/5 — verify-dependabot exit codes ---------------------

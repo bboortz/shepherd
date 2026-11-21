@@ -92,6 +92,12 @@ jobs:
               RELEASED_AT=$(curl -sfL "https://registry.npmjs.org/$ENC" \
                 | jq -r --arg v "$TO" '.time[$v] // empty' 2>/dev/null || true)
               ;;
+            pip)
+              # PyPI exposes per-version upload times at .releases[<ver>][*].upload_time.
+              # Multiple files per release (wheel + sdist); any element's upload_time works.
+              RELEASED_AT=$(curl -sfL "https://pypi.org/pypi/$NAME/json" \
+                | jq -r --arg v "$TO" '.releases[$v][0].upload_time // empty' 2>/dev/null || true)
+              ;;
             github_actions)
               # NAME is typically owner/repo. Try v-prefix first, then bare.
               RELEASED_AT=$(gh api "repos/$NAME/releases/tags/v$TO" --jq .published_at 2>/dev/null || true)
