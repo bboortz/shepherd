@@ -6,7 +6,28 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-R0 shipped 2026-11-21. Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+
+## [v0.3.0] — 2026-11-21 — SH-011 Dependabot baseline
+
+**Per-repo configurable Dependabot layer (SH-011).** Shepherd now ships three new templates and a Zig verifier that together give managed repos a hygiene floor: Dependabot always on, selectively auto-merged.
+
+### Added
+
+- `templates/dependabot.yml` — reference baseline (`version: 2`, github-actions ecosystem).
+- `templates/dependabot-automerge.yml` — reusable auto-merge workflow for repos that opt in. Pure `gh` CLI; no third-party actions; title-based bump classification.
+- `templates/shepherd.yml` — new optional `dependabot:` block with `enforce_enabled` (default `true`) and `auto_merge` (default `false`).
+- `shepherd-bump --verify-dependabot [--root PATH]` — new mode. Exit 0 ok, 3 missing `.github/dependabot.yml`, 4 malformed (no `version: 2` or no `updates:` entry). Honours `.shepherd.yml` → `dependabot.enforce_enabled: false` opt-out.
+- `test/acceptance/test_SH_011_dependabot.sh` — 23 assertions covering template shape, SH-001 compliance (no `fetch-metadata`, every `uses:` is `actions/*` SHA-pinned), and the five verify-dependabot exit paths.
+- Docs: `docs/stories/SH-011-dependabot-enforce-automerge.md`, `docs/plan/SH-011-dependabot-enforce-automerge-plan.md`, four new CAPs + three extensions in `docs/CAPABILITIES.md`, one §13 decision line in `docs/DESIGN.md` dated 2026-11-21.
+
+### Gated-minus-scan-not-worse (SH-009 gap)
+
+The auto-merge workflow enforces three of the four §12 gates — `bump_level ∈ {patch, minor}`, diff ≤ 50 non-lockfile lines, release age ≥ 24 h (npm + github_actions only; other ecosystems fall through to needs-human). `gate.scan-not-worse` is **not** applied on this path and is tracked as a documented gap until SH-009 lands (Fri 4 Dec target per DESIGN §13).
+
+### Supply chain
+
+The new auto-merge workflow uses no third-party GitHub Actions. PR classification is derived from the Dependabot PR title; release-date lookup is `curl registry.npmjs.org` for npm and `gh api repos/.../releases/tags/...` for GitHub Actions. `dependabot/fetch-metadata` is explicitly not used. Extends `supply-chain.no-third-party-actions-critical-path` test coverage.
 
 ## [v0.2.0] — 2026-11-21 — R0 shipped
 

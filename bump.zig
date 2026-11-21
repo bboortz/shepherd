@@ -4,18 +4,21 @@
 //!   shepherd-bump --list                        List pinned `uses:` refs in the repo.
 //!   shepherd-bump --check                       Query upstream tags; print bump plan. (TODO)
 //!   shepherd-bump --pr                          Open PRs for bumpable deps. (TODO)
+//!   shepherd-bump --verify-dependabot           Verify .github/dependabot.yml presence+shape (SH-011).
 //!
 //! Flags:
 //!   --root PATH         Repo root (default: cwd).
-//!   --ecosystem NAME    Only `gh-actions` is supported.
+//!   --ecosystem NAME    Only `gh-actions` is supported (bump modes only).
 //!
-//! Exit codes: 0 ok, 1 cannot open root / I/O, 2 usage.
+//! Exit codes: 0 ok, 1 cannot open root / I/O, 2 usage,
+//!             3 dependabot.yml missing, 4 dependabot.yml malformed.
 //!
-//! See docs/stories/SH-001-retire-renovate.md for scope and acceptance.
+//! See docs/stories/SH-001-retire-renovate.md and
+//!     docs/stories/SH-011-dependabot-enforce-automerge.md for scope.
 
 const std = @import("std");
 
-const Mode = enum { list, check, pr, help };
+const Mode = enum { list, check, pr, verify_dependabot, help };
 
 const Options = struct {
     mode: Mode = .help,
@@ -41,9 +44,10 @@ const UsesRef = struct {
 
 fn printUsage() void {
     const msg =
-        \\usage: shepherd-bump --list [--root PATH] [--ecosystem gh-actions]
-        \\       shepherd-bump --check [--root PATH] [--ecosystem gh-actions]  (TODO)
-        \\       shepherd-bump --pr    [--root PATH] [--ecosystem gh-actions]  (TODO)
+        \\usage: shepherd-bump --list                 [--root PATH] [--ecosystem gh-actions]
+        \\       shepherd-bump --check                [--root PATH] [--ecosystem gh-actions]  (TODO)
+        \\       shepherd-bump --pr                   [--root PATH] [--ecosystem gh-actions]  (TODO)
+        \\       shepherd-bump --verify-dependabot    [--root PATH]
         \\
     ;
     std.debug.print("{s}", .{msg});
@@ -60,6 +64,8 @@ fn parseArgs(args: []const []const u8) !Options {
             opts.mode = .check;
         } else if (std.mem.eql(u8, a, "--pr")) {
             opts.mode = .pr;
+        } else if (std.mem.eql(u8, a, "--verify-dependabot")) {
+            opts.mode = .verify_dependabot;
         } else if (std.mem.eql(u8, a, "--help") or std.mem.eql(u8, a, "-h")) {
             opts.mode = .help;
         } else if (std.mem.eql(u8, a, "--root")) {
@@ -245,6 +251,102 @@ fn refLess(_: void, a: UsesRef, b: UsesRef) bool {
     return std.mem.order(u8, a.repo, b.repo) == .lt;
 }
 
+fn trimLeadingWs(s: []const u8) []const u8 {
+    var i: usize = 0;
+    while (i < s.len and (s[i] == ' ' or s[i] == '\t')) : (i += 1) {}
+    return s[i..];
+}
+
+fn trimTrailingWs(s: []const u8) []const u8 {
+    var end = s.len;
+    while (end > 0 and (s[end - 1] == ' ' or s[end - 1] == '\t' or s[end - 1] == '\r')) : (end -= 1) {}
+    return s[0..end];
+}
+
+/// Matches `enforce_enabled:` with any amount of whitespace, followed by `false`.
+/// Used to honour the `.shepherd.yml` → `dependabot.enforce_enabled: false` opt-out.
+/// Deliberately permissive (not a full YAML parser): if the user writes it
+/// anywhere in the file at zero-or-more leading indent, we treat it as opt-out.
+fn lineIsEnforceDisabled(line: []const u8) bool {
+    const t = trimLeadingWs(trimTrailingWs(line));
+    const key = "enforce_enabled:";
+    if (!std.mem.startsWith(u8, t, key)) return false;
+    const rest = trimLeadingWs(t[key.len..]);
+    return std.mem.eql(u8, rest, "false");
+}
+
+fn lineIsVersionTwo(line: []const u8) bool {
+    const t = trimLeadingWs(trimTrailingWs(line));
+    // Must match exactly `version: 2` (allow spaces after the colon).
+    const key = "version:";
+    if (!std.mem.startsWith(u8, t, key)) return false;
+    const rest = trimLeadingWs(t[key.len..]);
+    return std.mem.eql(u8, rest, "2");
+}
+
+fn lineIsPackageEcosystem(line: []const u8) bool {
+    const t = trimLeadingWs(trimTrailingWs(line));
+    // Accept both `- package-ecosystem: NAME` and (less common) `package-ecosystem: NAME`.
+    const bare = "package-ecosystem:";
+    const bulleted = "- package-ecosystem:";
+    return std.mem.startsWith(u8, t, bulleted) or std.mem.startsWith(u8, t, bare);
+}
+
+fn cmdVerifyDependabot(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
+    var root = std.Io.Dir.cwd().openDir(io, opts.root, .{}) catch |err| {
+        std.debug.print("error: cannot open root '{s}': {s}\n", .{ opts.root, @errorName(err) });
+        return 1;
+    };
+    defer root.close(io);
+
+    // --- Opt-out check via .shepherd.yml -----------------------------------
+    if (root.readFileAlloc(io, ".shepherd.yml", allocator, .limited(64 * 1024))) |shepherd_cfg| {
+        defer allocator.free(shepherd_cfg);
+        var it = std.mem.splitScalar(u8, shepherd_cfg, '\n');
+        while (it.next()) |line| {
+            if (lineIsEnforceDisabled(line)) {
+                std.debug.print("verify-dependabot: opted out via .shepherd.yml (enforce_enabled: false)\n", .{});
+                return 0;
+            }
+        }
+    } else |err| switch (err) {
+        error.FileNotFound => {}, // no .shepherd.yml — default is enforce_enabled: true
+        else => return err,
+    }
+
+    // --- Presence check ----------------------------------------------------
+    const contents = root.readFileAlloc(io, ".github/dependabot.yml", allocator, .limited(64 * 1024)) catch |err| switch (err) {
+        error.FileNotFound => {
+            std.debug.print("verify-dependabot: .github/dependabot.yml is missing (exit 3)\n", .{});
+            return 3;
+        },
+        else => {
+            std.debug.print("verify-dependabot: cannot read .github/dependabot.yml: {s}\n", .{@errorName(err)});
+            return 1;
+        },
+    };
+    defer allocator.free(contents);
+
+    // --- Shape check: version: 2 AND ≥1 package-ecosystem entry -----------
+    var has_version_two = false;
+    var has_updates_entry = false;
+    var it = std.mem.splitScalar(u8, contents, '\n');
+    while (it.next()) |line| {
+        if (lineIsVersionTwo(line)) has_version_two = true;
+        if (lineIsPackageEcosystem(line)) has_updates_entry = true;
+    }
+    if (!has_version_two or !has_updates_entry) {
+        std.debug.print(
+            "verify-dependabot: malformed — version_two={} updates_entry={} (exit 4)\n",
+            .{ has_version_two, has_updates_entry },
+        );
+        return 4;
+    }
+
+    std.debug.print("verify-dependabot: ok\n", .{});
+    return 0;
+}
+
 fn cmdList(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
     if (!std.mem.eql(u8, opts.ecosystem, "gh-actions")) {
         std.debug.print("error: ecosystem '{s}' not supported (only 'gh-actions')\n", .{opts.ecosystem});
@@ -300,6 +402,7 @@ pub fn main(init: std.process.Init) !u8 {
             break :blk 0;
         },
         .list => try cmdList(allocator, io, opts),
+        .verify_dependabot => try cmdVerifyDependabot(allocator, io, opts),
         .check, .pr => blk: {
             std.debug.print("error: --{s} not yet implemented (SH-001 follow-up)\n", .{@tagName(opts.mode)});
             break :blk 2;
