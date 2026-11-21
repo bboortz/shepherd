@@ -78,6 +78,17 @@ Status values: `design` (described in DESIGN, not implemented yet), `active` (im
 | `escalation.needs-human-issue` | After the last failed attempt — or any time the bot needs human help — open a needs-human issue. No quiet logging. | §12 | design | — |
 | `escalation.dedupe` | If a needs-human issue for the same problem is already open, comment on it instead of duplicating. | §12 | design | — |
 
+## R1 — Reusable Action (SH-007)
+
+Shepherd packaged as a reusable workflow. Managed repos drop in a thin caller + `.shepherd.yml` + one secret; scripts stay in shepherd (no more per-pilot copies).
+
+| CAP | Description | Source | Status | Test |
+|---|---|---|---|---|
+| `r1.reusable-action` | `.github/workflows/reusable-shepherd.yml` is `on: workflow_call`; `templates/caller-shepherd.yml` is a ≤ 20-line drop-in. Pilots migrate from copied scripts to a single `uses:` reference. | SH-007 (SH-006 R1-A) | active | `test/acceptance/test_SH_007_reusable.sh` + live run on `bboortz/healthy` (recorded in SH-007 plan post-merge notes) |
+| `onboarding.one-workflow` | 15-min setup: copy one caller workflow + one `.shepherd.yml`, add one secret, push. | §13 (SH-007) | active | `test/acceptance/test_SH_007_reusable.sh` (caller template ≤ 20 lines, SHA-pinned reusable ref) |
+| `onboarding.default-github-token` | Default auth is the built-in `GITHUB_TOKEN` + `ANTHROPIC_API_KEY`; no App identity required. | §13 (SH-007) | active | `test/acceptance/test_SH_007_reusable.sh` (reusable workflow declares only `ANTHROPIC_API_KEY` as required secret; `permissions:` uses `GITHUB_TOKEN`) |
+| `config.required-per-repo` | `.shepherd.yml` is **required** at the repo root; the reusable Action fails fast (exit 1, named annotation) if missing. Replaces `onboarding.zero-config-default` per 2026-11-21 decision. | SH-007 (DESIGN §13 "Decided on 2026-11-21") | active | `test/acceptance/test_SH_007_reusable.sh` (verify-shepherd-yml.sh exit 0 vs 1; DESIGN language) |
+
 ## Prompt-injection drill (SH-005)
 
 A replayable, offline injection harness on `bboortz/shepherd`. Exercises the shepherd-poc policy chain (`agent-call.sh` → `validate.sh`) against a curated library of adversarial agent responses. CI-gated: every PR to `main` runs the full drill; a failure blocks merge.
@@ -129,7 +140,7 @@ A configurable per-repo baseline: shepherd enforces that managed repos have a we
 
 | CAP | Description | Source | Status | Test |
 |---|---|---|---|---|
-| `onboarding.one-workflow` | 15-minute setup: copy one workflow, add one secret, push. | §13 | aspirational | — |
-| `onboarding.default-github-token` | Default auth is the built-in `GITHUB_TOKEN` or a fine-grained PAT; the App is advanced-mode only. | §13 | aspirational | — |
-| `onboarding.zero-config-default` | `.shepherd.yml` is optional; defaults are the ones in `templates/shepherd.yml`. | §13 | aspirational | — |
+| `onboarding.one-workflow` | **See "R1 — Reusable Action (SH-007)" section** — flipped to `active` 2026-11-21. | §13 (SH-007) | active | see SH-007 section above |
+| `onboarding.default-github-token` | **See "R1 — Reusable Action (SH-007)" section** — flipped to `active` 2026-11-21. | §13 (SH-007) | active | see SH-007 section above |
+| `onboarding.zero-config-default` | ~~`.shepherd.yml` is optional; defaults are the ones in `templates/shepherd.yml`.~~ **Deprecated 2026-11-21 (SH-007).** Replaced by `config.required-per-repo` — `.shepherd.yml` is now mandatory. | §13 (SH-007) | deprecated | — |
 | `onboarding.dry-run-first` | Dry-run mode is the first experience; the bot comments what it would fix and changes nothing. | §13 | aspirational | — |

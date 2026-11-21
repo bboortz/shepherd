@@ -209,15 +209,15 @@ This plan supersedes the phases in section 10 for the first public version. Four
 
 **Goal:** 100 GitHub stars within three months of launch, plus 20 open issues with feedback from other people.
 
-**Sharp pitch (draft):** An AI agent that fixes your vulnerable dependencies inside a locked sandbox, with a hard budget and a protected-files list. One workflow file, one secret, 15 minutes.
+**Sharp pitch (draft):** An AI agent that fixes your vulnerable dependencies inside a locked sandbox, with a hard budget and a protected-files list. One workflow file + one config, one secret, 15 minutes.
 
 **Design principles for onboarding**
 
-- Onboarding in 15 minutes: copy one workflow file, add one secret, push.
+- Onboarding in 15 minutes: copy one caller workflow + one `.shepherd.yml`, add one secret, push.
 - No GitHub App on the default path. Use the built-in `GITHUB_TOKEN` or a fine-grained token. The App is an advanced option later.
-- No central repo and no hosted service at the start. One repo, one file, one secret (the Claude API key).
+- No central repo and no hosted service at the start. One repo, two files, one secret (the Claude API key).
 - The gateway is built into the action: network locked to the model API only, budget cap enforced inside it.
-- Zero config by default. The config file is optional, defaults are the ones already decided.
+- Required config, templated. `.shepherd.yml` is **mandatory** in each managed repo (SH-007 decision 2026-11-21); `templates/shepherd.yml` is the copyable baseline. The reusable Action fails fast if the caller doesn't ship one. Rationale: explicit beats magic, auditable at the repo boundary, symmetric with SH-011's `.github/dependabot.yml` enforcement.
 - Notifications through GitHub itself (needs-human issues). ntfy is optional and comes later.
 - Dry-run mode is the first experience: the bot comments what it would fix and changes nothing.
 
@@ -248,7 +248,7 @@ This plan supersedes the phases in section 10 for the first public version. Four
 **In scope**
 
 - Packaged as a reusable GitHub Action in `bboortz/shepherd`, used by a copied caller workflow.
-- Optional `.shepherd.yml` with per-repo overrides for the existing defaults.
+- Required `.shepherd.yml` in each managed repo (SH-007 — see "Decided on 2026-11-21" below). Per-repo overrides for the defaults in `templates/shepherd.yml`. The reusable Action verifies presence and exits with a clear error if missing.
 - Dry-run mode, on by default for the first run.
 - Gates: required pipelines green, diff size limit, scan not worse (high and critical by default), retries.
 - Path blocklist enforced by the trusted step, so the agent cannot change its own rules.
@@ -326,6 +326,7 @@ This plan supersedes the phases in section 10 for the first public version. Four
 
 ### Decided on 2026-11-21
 
+- **Required `.shepherd.yml` in every managed repo (SH-007).** Flips the previous optional-config and zero-config-default principles. Rationale: (a) explicit beats magic — each repo declares its risk tier, auto-merge policy, build/test commands in the open; (b) auditable at the repo boundary — no cross-referencing shepherd defaults; (c) symmetric with SH-011's `.github/dependabot.yml` enforcement. Cost: one extra copy-paste in the quickstart (`templates/shepherd.yml` → `.shepherd.yml`). 15-min setup budget intact.
 - **Dependabot as a per-repo baseline, alongside `shepherd-bump` (SH-011).** Shepherd enforces the presence of a well-formed `.github/dependabot.yml` on every managed repo (`shepherd-bump --verify-dependabot`, default `on`; opt-out via `.shepherd.yml`). Each repo can additionally opt into **gated auto-merge of Dependabot PRs** (default `off`) — patch + minor only, ≤50 non-lockfile lines, ≥24 h since upstream release (npm + github_actions ecosystems; others fall through to needs-human). `gate.scan-not-worse` is **not** applied on this path and is tracked as a documented gap until SH-009 ships. Dependabot does **not** replace `shepherd-bump` or the smart-fix agent — it's a hygiene floor that reduces vulnerability backlog on managed repos without adding third-party actions to the critical path (the auto-merge workflow uses pure `gh` CLI + title parsing; no `fetch-metadata` action).
 - **Prompt-injection drill is part of the trust boundary (SH-005).** A replayable, offline injection harness on `bboortz/shepherd` (`make injection-drill`, `.github/workflows/injection-drill.yml`) exercises the shepherd-poc policy chain against a curated fixture library of adversarial agent responses. A failure blocks merge to `main`. The drill is pure replay — no live Anthropic calls, no PR writes, no secrets — and is treated as a trust-boundary invariant alongside §12's path blocklist and sandbox rules: changes to `validate.sh` or the path blocklist must not reduce drill coverage. Two live-API fixtures (`model-identity-escalation`, `injection-in-manifest`) and one R2-scope gap (`fake-fix-benign-looking`) are parked in the fixture library and tracked. Fleet-side: `scripts/shepherd-poc/` is now protected (in addition to `.github/workflows/`, `.shepherd.yml`, `scripts/release.sh`, `VERSION`, secrets patterns) — the enforcement scripts themselves cannot be modified by the agent.
 

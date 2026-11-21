@@ -6,7 +6,41 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+Next: SH-008 (sandbox perimeter), SH-009 (auto-merge gates), SH-010 (waiting-period) complete R1. See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+
+## [v0.5.0-rc1] — 2026-11-21 — SH-007 R1-A: reusable shepherd Action
+
+**R1-A ships: shepherd as a reusable workflow.** Managed repos drop in a thin caller + `.shepherd.yml` + one secret. Scripts no longer live in each pilot.
+
+### Added
+
+- `.github/workflows/reusable-shepherd.yml` — reusable workflow (`on: workflow_call`). Required secret: `ANTHROPIC_API_KEY`. Checks out the caller + shepherd scripts (second checkout pinned to the invoking commit via `github.job_workflow_sha`), then runs the trusted-step chain: verify-shepherd-yml → install-trivy → scan → agent → validate → setup-node → regen-lockfile → validate-combined → open-pr.
+- `templates/caller-shepherd.yml` — thin caller (16 lines) that managed repos drop into `.github/workflows/shepherd.yml`. Explicit `secrets: {ANTHROPIC_API_KEY: ...}` (tighter audit than `secrets: inherit`). SHA-pinning is `@main` in rc1; R1 release ships a tagged ref.
+- `scripts/shepherd-poc/verify-shepherd-yml.sh` — new gate. Exits 1 with a GitHub Actions `::error::` annotation if the caller has no `.shepherd.yml` at the repo root. Part of the SH-007 required-config decision.
+- `test/acceptance/test_SH_007_reusable.sh` — 20 assertions covering reusable workflow shape, caller template shape + size, verify-shepherd-yml behaviour, DESIGN §13 language alignment.
+- `docs/stories/SH-007-reusable-action.md` + `docs/plan/SH-007-reusable-action-plan.md`.
+- 4 CAPs: `r1.reusable-action` (new, active), `onboarding.one-workflow` (aspirational → active), `onboarding.default-github-token` (aspirational → active), `config.required-per-repo` (new, active).
+
+### Changed — DESIGN §13 (2026-11-21 decision)
+
+- R1 scope line: "Optional `.shepherd.yml`" → **"Required `.shepherd.yml`"**. The reusable Action verifies presence and fails fast.
+- Onboarding principle: "Zero config by default. The config file is optional…" → **"Required config, templated"**. `templates/shepherd.yml` is the copyable baseline; the 15-min setup budget now covers one caller workflow + one `.shepherd.yml`.
+- Sharp pitch updated: "One workflow file + one config, one secret, 15 minutes."
+- New "Decided on 2026-11-21" entry naming the flip + rationale (explicit beats magic / auditable at repo boundary / symmetric with SH-011).
+
+### Deprecated
+
+- CAP `onboarding.zero-config-default` → `deprecated`. Replaced by `config.required-per-repo`. Rationale in DESIGN §13 "Decided on 2026-11-21".
+
+### Breaking
+
+- Managed repos **must** ship `.shepherd.yml`. All three R0 pilots already have one (post-SH-011); future pilots copy from `templates/shepherd.yml`. The reusable Action exits 1 with a clear annotation + link if it's missing.
+
+### Pending (follow-up ship, not in rc1)
+
+- Canary migration PR on `bboortz/healthy` (replace `shepherd-poc.yml` with the thin caller; delete `scripts/shepherd-poc/`). Live `workflow_dispatch` recorded in SH-007 plan's post-merge notes.
+- Migration of `beaconry` + `ham-radio-compass` to the reusable Action — follow-up ship after the healthy canary produces a successful live run.
+- `v1.0.0` tag: ships after SH-008/009/010 complete R1.
 
 ## [v0.4.0] — 2026-11-21 — SH-005 prompt-injection drill
 
