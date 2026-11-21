@@ -248,3 +248,8 @@ Thumbs.db
 .zig-cache/
 zig-out/
 bin/
+
+# Local-only API keys — NEVER commit (repo is public per DESIGN §13).
+.anthropic_key
+.anthrophic_key
+*.api-key
