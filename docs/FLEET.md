@@ -9,7 +9,8 @@ This file is the fleet registry until the fleet layer activates after Release 3.
 | Repo | Release line | Onboarded | Owner | Notes |
 |---|---|---|---|---|
 | [`bboortz/healthy`](https://github.com/bboortz/healthy) | R0 (pilot 1) | 2026-11-21 | @benni | First R0 pilot ([HC-008](https://github.com/bboortz/healthy/blob/main/docs/stories/HC-008-shepherd-poc.md)). Zig single file, zero deps → Trivy finds nothing; first dispatch green against the "no findings" exit path. |
-| [`bboortz/beaconry`](https://github.com/bboortz/beaconry) | R0 (pilot 2) | 2026-11-21 | @benni | Second R0 pilot ([BC-145](https://github.com/bboortz/beaconry/blob/main/docs/stories/BC-145-shepherd-poc.md)). Python + Docker — real dependency surface so the agent-fix path gets real exercise. Cron offset 30 min from healthy. |
+| [`bboortz/beaconry`](https://github.com/bboortz/beaconry) | R0 (pilot 2) | 2026-11-21 | @benni | Second R0 pilot ([BC-145](https://github.com/bboortz/beaconry/blob/main/docs/stories/BC-145-shepherd-poc.md)). Python + Docker — dependency surface kept too clean to trigger Trivy on first run; cron offset 30 min from healthy. |
+| [`bboortz/ham-radio-compass`](https://github.com/bboortz/ham-radio-compass) | R0 (pilot 3) | 2026-11-21 | @benni | Third R0 pilot ([PR #5](https://github.com/bboortz/ham-radio-compass/pull/5)). Expo / React Native — `package-lock.json` surface is where npm advisories actually bite. Cron offset to 06:00 UTC. First pilot without an in-repo DD-TGD story (this repo doesn't carry that convention). |
 
 ## Archived
 
