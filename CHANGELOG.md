@@ -6,7 +6,14 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: beaconry + HRC gates rollout + live auto-merge canary (SH-009 close-out), SH-008 (sandbox perimeter), SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+Next: live auto-merge canary on HRC (SH-009 close-out), SH-008 (sandbox perimeter), SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+
+## [v0.6.0-rc4] — 2026-11-21 — SH-009 part 2 bugfix: tolerant .shepherd.yml parsing
+
+### Fixed
+
+- `.github/workflows/reusable-shepherd-gates.yml` crashed on managed repos whose `.shepherd.yml` predates the SH-009 schema v1. The `get_scalar` + `grep -E ... | grep -Eo '(true|false)'` pipelines exited 1 on missing keys; `set -euo pipefail` killed the script before any `::notice::` decision could land. Observed on HRC run 44948062143 (PR #47, `.shepherd.yml` from SH-011 era).
+- **Fix**: wrap each `grep` in `{ ... || true; }` so missing keys yield an empty string instead of a pipeline failure. The `${var:=default}` fallback then supplies the SH-009 schema v1 defaults (`max_diff_lines=50`, `monitored_pipelines=all`, `rescan_scope=high_critical`, `auto_merge.patch=true`, etc.). Pilot `.shepherd.yml` files can adopt the new fields at their own pace.
 
 ## [v0.6.0-rc3] — 2026-11-21 — SH-009 part 2: scan-not-worse + needs-human + dry-run + workflow_run
 
