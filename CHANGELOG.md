@@ -8,6 +8,16 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+### Post-ship update — SH-011 rolled out to all four pilots (2026-11-21)
+
+Templates dropped into `bboortz/shepherd` (PR #3), `bboortz/beaconry` (PR #63), `bboortz/healthy` (PR #12), and `bboortz/ham-radio-compass` (PRs #27 + #36 config-tweak). Auto-merge workflow live on `ham-radio-compass` only. `allow_auto_merge` toggled on for HRC via API.
+
+**Workflow observed on 9 Dependabot PRs on `ham-radio-compass`.** All 9 correctly left open — 7 major bumps + 1 grouped PR (title classifier gap) + 2 pre-config security PRs that Dependabot asked to be closed. Zero false-positive auto-merges. Zero crashes. Decisions logged as `::notice::` annotations on each run.
+
+**Fan-out:** adding `.github/dependabot.yml` also triggered fresh version-update PRs on the three repos that didn't opt into auto-merge (beaconry 10, healthy 4, shepherd 2) — those await human review.
+
+**Follow-ups parked in IDEAS.md:** grouped-PR title parsing, 0.x.y semver treatment, Dependabot-recreate-after-config-change nudge.
+
 ## [v0.3.0] — 2026-11-21 — SH-011 Dependabot baseline
 
 **Per-repo configurable Dependabot layer (SH-011).** Shepherd now ships three new templates and a Zig verifier that together give managed repos a hygiene floor: Dependabot always on, selectively auto-merged.

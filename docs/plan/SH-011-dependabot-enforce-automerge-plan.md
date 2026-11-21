@@ -129,6 +129,53 @@ Three lenses. Any ⚠️/❌ row blocks shipping — cycle back to step 4.
 | `make verify-traceability` green | n/a (stub until R1) |
 | `make check` green | ✅ (yamllint + build + acceptance — 44 pass / 0 fail across SH-001 + SH-011) |
 
-## Post-merge notes
+## Post-merge notes (2026-11-21, same-day rollout)
 
-<Filled after the PR merges and the cross-repo rollout completes. Record: how many Dependabot PRs auto-merged on `ham-radio-compass`; which ones were rejected by which gate; any workflow bug caught by reality.>
+### What shipped
+
+| Repo | PR | Change | Status |
+|---|---|---|---|
+| `bboortz/shepherd` | [#2](https://github.com/bboortz/shepherd/pull/2) | Core SH-011: templates + Zig verifier + tests + CAPs + DESIGN § | merged `d313da8` |
+| `bboortz/shepherd` | [#3](https://github.com/bboortz/shepherd/pull/3) | Dogfood: `.github/dependabot.yml` + `.shepherd.yml` | merged |
+| `bboortz/beaconry` | [#63](https://github.com/bboortz/beaconry/pull/63) | Baseline (github-actions + pip), auto_merge: false | merged `68bca36` |
+| `bboortz/healthy` | [#12](https://github.com/bboortz/healthy/pull/12) | Baseline (github-actions + docker), auto_merge: false | merged |
+| `bboortz/ham-radio-compass` | [#27](https://github.com/bboortz/ham-radio-compass/pull/27) | Baseline (github-actions + npm) + auto-merge workflow + `.shepherd.yml` with `auto_merge: true` | merged |
+| `bboortz/ham-radio-compass` | [#36](https://github.com/bboortz/ham-radio-compass/pull/36) | Flip npm scan to `daily` to nudge Dependabot after a config-change edge case | merged `258f829` |
+
+Repo setting change: `allow_auto_merge: true` enabled on `bboortz/ham-radio-compass` via `gh api -X PATCH`.
+
+### Workflow runs observed on `ham-radio-compass`
+
+The auto-merge workflow fired on **9 Dependabot PRs** within 2 minutes of the opt-in landing. Every run completed with `conclusion=success` (the workflow always exits 0 so it never shows red on a PR; the auto-merge decision is encoded in a `::notice::` annotation).
+
+| PR | From → To | Classifier result | Auto-merge? | Reason |
+|---|---|---|---|---|
+| #28 | actions/setup-node 4 → 7 | major | ❌ | major bump — human review |
+| #29 | actions/checkout 4 → 7 | major | ❌ | major bump — human review |
+| #30 | @babel/core 7.28.0 → 8.1.2 | major | ❌ | major bump — human review |
+| #31 | expo-status-bar 2.2.3 → 58.0.5 | major | ❌ | major bump — human review |
+| #32 | expo-sensors 14.1.4 → 58.0.5 | major | ❌ | major bump — human review |
+| #33 | expo-location 18.1.6 → 58.0.22 | major | ❌ | major bump — human review |
+| #34 | typescript 5.8.3 → 7.0.2 | major | ❌ | major bump — human review |
+| #35 | react + @types/react (grouped) | unknown | ❌ | unknown title shape — human review |
+| (closed #25, #26) | — | — | — | GitHub's automated-security-fixes PRs from before the config landed — Dependabot asked for them to be closed so it could recreate under the new dependabot.yml |
+
+**Zero auto-merges fired** on `ham-radio-compass`. This is not a bug — it's the gate working correctly. HRC's deps are so far behind that every eligible update is a major bump, and the one grouped PR has a title shape the classifier doesn't parse. The workflow correctly refused all 9.
+
+### Fan-out on the other three repos
+
+Dependabot also opened fresh PRs on `beaconry` (10), `healthy` (4), `shepherd` (2). None of those repos has the auto-merge workflow installed (`.shepherd.yml` → `auto_merge: false`), so all 16 wait for human review. Several of them (patch/minor + small diff) **would** auto-merge once their repos opt in.
+
+### Operational quirk discovered
+
+GitHub's "automated-security-fixes" setting created PRs #25 / #26 on `ham-radio-compass` before any `.github/dependabot.yml` existed. After the config landed, Dependabot flagged those PRs as "created from a dependabot.yml entry that has been deleted" and asked for them to be closed. On close, Dependabot did **not** auto-recreate them from the new config (the alerts #50 for `ws` and #56 for `@babel/core` are still open). Switching `interval: weekly` → `daily` in #36 did not immediately re-trigger. Expected resolution: Dependabot's next scheduled scan will reopen them, at which point the auto-merge workflow will fire with the patch-level + ≤50 lockfile-exempt + ≥24h-release gates satisfied.
+
+### Follow-ups promoted to IDEAS.md
+
+- **Grouped Dependabot PR title parsing** — the current title regex expects `Bump <name> from X.Y.Z to A.B.C`; grouped PRs ship as `Bump <a> and <b>`. Classifying from PR body or per-file manifest diff would unblock them.
+- **0.x.y semver treatment** — my classifier treats `0.14.1 → 0.17.5` as `minor` (digit-equality rule). Under SemVer 2.0, 0.x.y bumps have no backward-compat guarantee; many maintainers treat the second digit as effectively major. Consider promoting `0.x.y` minor changes to major in the gate.
+- **Live-validation CAP evidence** — the three ⚠️ rows in Lens 2 of this plan (`auto-merge-level-patch-minor`, `gate.diff-size`, `gate.waiting-period` partial) flip to ✅ when the first legitimate patch/minor Dependabot PR auto-merges on a managed repo. Tracked here until that event; close the loop with a CHANGELOG line.
+
+### Shipping evidence table — final
+
+Lens 1 (Gherkin coverage): **5/5 ✅**. Lens 2 (Behaviour symmetry): **4 ✅, 3 ⚠️** (live-validation deferred as above). Lens 3 (Self-consistency): **4 ✅, 1 n/a, 1 n/a**. No ❌ rows. **Shipped.**

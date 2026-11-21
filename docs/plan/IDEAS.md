@@ -34,6 +34,14 @@ One story per ecosystem. Each extends `shepherd-bump` (Zig single-file budget pe
 - **Replace `aquasecurity/trivy-action` with an inline, sigstore-verified Trivy install.** The binary is fine; the Action wrapper is the vector (CVE-2026-33634). Install via `curl` + `cosign verify-blob` of the sigstore bundle in `reusable-verify.yml`. Alternative: switch scanner to osv-scanner or grype entirely. Needs a story.
 - **Lint: refuse mutable action refs.** A gate (`verify-sha-pinned-actions`) that fails CI if any `uses:` line is not a 40-hex SHA. Complement to `shepherd-bump`.
 
+## Dependabot flow — follow-ups from SH-011 rollout
+
+Discovered during the 2026-11-21 rollout on `bboortz/ham-radio-compass` (post-merge notes: `docs/plan/SH-011-dependabot-enforce-automerge-plan.md`).
+
+- **Grouped Dependabot PR title parsing.** Current title regex is `Bump <name> from X.Y.Z to A.B.C`; grouped PRs ship as `Bump <a> and <b>`. The SH-011 workflow classifies them as `unknown` → no auto-merge. Fix: parse `.github/dependabot.yml` `groups:` config, inspect PR body for per-package version pairs, or walk manifest diff files. Small story.
+- **0.x.y semver treatment.** SH-011 classifier treats `0.14.1 → 0.17.5` as `minor` (digit equality). Under SemVer 2.0 this is potentially breaking. Consider promoting any `0.x.y → 0.y+.z` change to `major` in the gate — matches ecosystem convention (npm, ruff, zig).
+- **Dependabot-recreate-after-config-change nudge.** After a repo first adopts `.github/dependabot.yml`, pre-existing GitHub automated-security PRs are orphaned ("delete the PR so Dependabot can recreate") and Dependabot does not immediately recreate them on close. Need a procedural note in the SH-011 docs or a shepherd helper that re-triggers the security scan.
+
 ## Candidates from DESIGN.md §12
 
 - **Scope level 2 (small code changes after an upgrade).** Lands in R2 per §13, but worth a story to pin the guardrails — how to detect that a dep bump broke an API surface, what the retry/escalation ladder looks like.
