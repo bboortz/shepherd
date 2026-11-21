@@ -1,8 +1,9 @@
 ---
 id: SH-004
 slug: r0-poc-on-healthy
-status: in-progress
+status: shipped
 created: 2026-11-21
+shipped: 2026-11-21
 owner: @benni
 ---
 

@@ -6,11 +6,13 @@ This file is the fleet registry until the fleet layer activates after Release 3.
 
 ## Active
 
-| Repo | Release line | Onboarded | Owner | Notes |
+R0 shipped 2026-11-21 across all three pilots. Pipeline + supply-chain hygiene + validator gates proven end-to-end; three real CVE fixes merged into `ham-radio-compass/main` autonomously.
+
+| Repo | Release line | Onboarded | Owner | Live result on R0 |
 |---|---|---|---|---|
-| [`bboortz/healthy`](https://github.com/bboortz/healthy) | R0 (pilot 1) | 2026-11-21 | @benni | First R0 pilot ([HC-008](https://github.com/bboortz/healthy/blob/main/docs/stories/HC-008-shepherd-poc.md)). Zig single file, zero deps → Trivy finds nothing; first dispatch green against the "no findings" exit path. |
-| [`bboortz/beaconry`](https://github.com/bboortz/beaconry) | R0 (pilot 2) | 2026-11-21 | @benni | Second R0 pilot ([BC-145](https://github.com/bboortz/beaconry/blob/main/docs/stories/BC-145-shepherd-poc.md)). Python + Docker — dependency surface kept too clean to trigger Trivy on first run; cron offset 30 min from healthy. |
-| [`bboortz/ham-radio-compass`](https://github.com/bboortz/ham-radio-compass) | R0 (pilot 3) | 2026-11-21 | @benni | Third R0 pilot ([PR #5](https://github.com/bboortz/ham-radio-compass/pull/5)). Expo / React Native — `package-lock.json` surface is where npm advisories actually bite. Cron offset to 06:00 UTC. First pilot without an in-repo DD-TGD story (this repo doesn't carry that convention). |
+| [`bboortz/healthy`](https://github.com/bboortz/healthy) | R0 shipped | 2026-11-21 | @benni | Zero fixable findings (single Zig file, no deps) — pipeline exercised, "no findings" exit path proven green. HC-008 shipped. |
+| [`bboortz/beaconry`](https://github.com/bboortz/beaconry) | R0 shipped | 2026-11-21 | @benni | Zero fixable findings (Python surface kept clean). Pipeline proven green on the second pilot. BC-145 shipped; cron offset 05:30 UTC. |
+| [`bboortz/ham-radio-compass`](https://github.com/bboortz/ham-radio-compass) | R0 shipped | 2026-11-21 | @benni | **Real fixes.** Three agent-produced PRs merged autonomously: [`#10`](https://github.com/bboortz/ham-radio-compass/pull/10) CVE-2025-7783 form-data, [`#12`](https://github.com/bboortz/ham-radio-compass/pull/12) CVE-2026-9277 shell-quote, [`#14`](https://github.com/bboortz/ham-radio-compass/pull/14) CVE-2026-102422 shell-quote. Cron offset 06:00 UTC. |
 
 ## Archived
 

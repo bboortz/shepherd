@@ -6,8 +6,42 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Tracking Release 0 (POC) work in `bboortz/healthy` and the Release 1 Action
-that will land back in this repo. See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+R0 shipped 2026-11-21. Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+
+## [v0.2.0] — 2026-11-21 — R0 shipped
+
+**🎯 DESIGN §13 Release 0 — shipped on three pilots instead of one.**
+
+### Ship summary
+
+- **3 real vulnerable-dependency fixes merged autonomously** on `bboortz/ham-radio-compass`:
+  - [`#10`](https://github.com/bboortz/ham-radio-compass/pull/10) — CRITICAL CVE-2025-7783 in `form-data` (`package.json` override + regenerated `package-lock.json`)
+  - [`#12`](https://github.com/bboortz/ham-radio-compass/pull/12) — CRITICAL CVE-2026-9277 in `shell-quote`
+  - [`#14`](https://github.com/bboortz/ham-radio-compass/pull/14) — CRITICAL CVE-2026-102422 in `shell-quote`
+- **Three live pilots** registered in `docs/FLEET.md` (healthy, beaconry, ham-radio-compass); byte-identical shepherd-poc scripts across all three.
+- **End-to-end autonomy proven** on the third dispatch: Trivy install (sigstore-verified) → scan → agent call → validate → `npm install --package-lock-only` regen → validate (combined) → `gh pr create` with labels — no manual rescue.
+
+### SH-004 shipped — story + plan at `docs/stories/SH-004-r0-poc-on-healthy.md`
+
+Post-merge notes section captures the five R1-forward design insights (lockfile size cap, LLM file-hallucination → hybrid flow, hunk-line-count errors → `--recount` cascade, Actions-PR-creation setting, deterministic top-1 picker).
+
+### CAPs flipped `design → active` with evidence pointers
+
+- `gate.diff-size` — path-aware cap (lockfile paths exempt)
+- `sandbox.no-secrets` — agent step `env:` audit
+- `sandbox.diff-only` — step ordering + live evidence
+- `gateway.budget-run` — `max_tokens=4096` approximation (~€0.12/run observed)
+- `blocklist.protected-files` — `validate.sh` + fixture-based tests
+- `scope.level-1` — hybrid flow with manifest-only agent + lockfile regen
+
+### Known gaps carried into R1
+
+- `sandbox.no-network-except-model` — agent runs on stock runner today.
+- `gateway.budget-day` — only per-run cap enforced in R0.
+- `escalation.needs-human-issue` / `escalation.dedupe` — R1 scope; R0 opens PRs without an escalation ladder.
+- `blocklist.unblock-per-repo` — R0 ships a fixed blocklist.
+- Live prompt-injection drill — validator layer is covered by acceptance tests in all three pilots; a live drill against a crafted dep changelog is deferred.
+- Ecosystem coverage beyond npm — pip / Go / Docker stubbed in `regen-lockfile.sh`.
 
 ## [v0.1.0] — 2026-11-21
 
