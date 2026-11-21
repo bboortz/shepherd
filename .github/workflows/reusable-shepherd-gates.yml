@@ -30,7 +30,12 @@ name: reusable-shepherd-gates
         type: number
 
 permissions:
-  contents: read
+  # contents: write is needed for the immediate-merge path. `gh pr merge
+  # --auto --merge` performs `mergePullRequest` directly when the PR is
+  # already in a CLEAN state (no waiting required) — which hits a GraphQL
+  # permission check on the integration token. `--auto` with pending CI
+  # would only need pull-requests:write, but we can't predict which path.
+  contents: write
   pull-requests: write
   issues: write
 

@@ -52,8 +52,11 @@ assert_contains "$TEMPL" "gates:"
 GATES=.github/workflows/reusable-shepherd-gates.yml
 assert_exists "$GATES"
 assert_contains "$GATES" "workflow_call"
-# Part 2: gates only read contents; the PR merge call uses pull-requests:write.
-# Part 2 also writes issues (needs-human).
+# Part 2 (rc6): contents:write is needed on the immediate-merge path
+# (gh pr merge --auto on already-clean PRs calls mergePullRequest directly,
+# which requires contents:write). pull-requests + issues are for the gate
+# logic itself (merge-enable + needs-human issue).
+assert_contains "$GATES" "contents: write"
 assert_contains "$GATES" "pull-requests: write"
 assert_contains "$GATES" "issues: write"
 assert_contains "$GATES" "gate.diff-size"
