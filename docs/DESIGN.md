@@ -324,6 +324,10 @@ This plan supersedes the phases in section 10 for the first public version. Four
 - Forge: GitHub only for repos, issues, PRs and Actions.
 - Model provider: Anthropic API first, through the locked gateway. Other providers can come later.
 
+### Decided on 2026-11-21
+
+- **Dependabot as a per-repo baseline, alongside `shepherd-bump` (SH-011).** Shepherd enforces the presence of a well-formed `.github/dependabot.yml` on every managed repo (`shepherd-bump --verify-dependabot`, default `on`; opt-out via `.shepherd.yml`). Each repo can additionally opt into **gated auto-merge of Dependabot PRs** (default `off`) — patch + minor only, ≤50 non-lockfile lines, ≥24 h since upstream release (npm + github_actions ecosystems; others fall through to needs-human). `gate.scan-not-worse` is **not** applied on this path and is tracked as a documented gap until SH-009 ships. Dependabot does **not** replace `shepherd-bump` or the smart-fix agent — it's a hygiene floor that reduces vulnerability backlog on managed repos without adding third-party actions to the critical path (the auto-merge workflow uses pure `gh` CLI + title parsing; no `fetch-metadata` action).
+
 ### Release schedule
 
 One release per week, first release candidate by Christmas (proposed 2026-11-19).

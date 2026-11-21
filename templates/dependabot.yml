@@ -1,0 +1,22 @@
+# Shepherd reference baseline for .github/dependabot.yml (SH-011).
+# Copy into a managed repo as .github/dependabot.yml. Per-repo tailoring:
+# add further `- package-ecosystem:` entries for ecosystems present in that repo
+# (npm, pip, docker, gomod, etc.). Every managed repo has GitHub Actions, so the
+# github-actions entry is the universal baseline.
+#
+# Shepherd's verifier (`shepherd-bump --verify-dependabot`) checks for:
+#   - `version: 2`
+#   - at least one `- package-ecosystem:` entry
+#
+# For repos that opt into Dependabot auto-merge, see templates/dependabot-automerge.yml.
+---
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - github-actions

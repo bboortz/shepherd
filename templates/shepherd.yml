@@ -10,3 +10,11 @@ auto_merge:
 security_fix: pr-only  # pr-only | auto-merge-low-risk
 notify: ntfy
 owner: benni
+
+# Dependabot baseline (SH-011). Shepherd enforces that managed repos have
+# a well-formed .github/dependabot.yml; opt into gated auto-merge per repo.
+dependabot:
+  enforce_enabled: true   # shepherd-bump --verify-dependabot checks presence + shape
+  auto_merge: false       # if true, patch+minor Dependabot PRs auto-merge after
+                          # §12 gates (≤50 lines + ≥24h since release + CI green).
+                          # gate.scan-not-worse is deferred to SH-009.
