@@ -8,6 +8,16 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+## [v0.3.1] — 2026-11-21 — SH-011: pip ecosystem release-date lookup
+
+### Added
+
+- `templates/dependabot-automerge.yml` now queries PyPI JSON (`https://pypi.org/pypi/<name>/json`) for `pip`-ecosystem Dependabot PRs, so Python dep bumps on managed repos (e.g. `bboortz/beaconry`) can satisfy `gate.waiting-period`.
+- `gate.waiting-period` CAP description extended: active for `npm_and_yarn` + `pip` + `github_actions`.
+- Test assertion added: `test/acceptance/test_SH_011_dependabot.sh` (SH-011 24/0).
+
+Follow-up ecosystems (go, docker, cargo) remain in the IDEAS list; they fall through to `age_ok=false` and are left open for human review.
+
 ### Post-ship update — SH-011 rolled out to all four pilots (2026-11-21)
 
 Templates dropped into `bboortz/shepherd` (PR #3), `bboortz/beaconry` (PR #63), `bboortz/healthy` (PR #12), and `bboortz/ham-radio-compass` (PRs #27 + #36 config-tweak). Auto-merge workflow live on `ham-radio-compass` only. `allow_auto_merge` toggled on for HRC via API.
