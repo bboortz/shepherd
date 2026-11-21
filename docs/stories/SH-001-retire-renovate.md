@@ -1,7 +1,7 @@
 ---
 id: SH-001
 slug: retire-renovate
-status: draft
+status: in-progress
 created: 2026-11-21
 owner: @benni
 ---

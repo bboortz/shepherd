@@ -3,7 +3,7 @@ id: SH-001
 slug: retire-renovate
 story: docs/stories/SH-001-retire-renovate.md
 branch: feat/SH-001-retire-renovate
-status: draft    # draft → in-progress when the branch is cut
+status: in-progress
 ---
 
 # SH-001 plan — Retire Renovate; add shepherd-bump for GitHub Actions
