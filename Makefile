@@ -16,7 +16,7 @@ MEMORY_FILES := $(wildcard memory/*.md) CLAUDE.md
 ACCEPTANCE_TESTS := $(wildcard test/acceptance/test_SH_*.sh)
 BUMP := bin/shepherd-bump
 
-.PHONY: help build test test-acceptance check yaml-lint md-lint verify-memory-size \
+.PHONY: help build test test-acceptance injection-drill check yaml-lint md-lint verify-memory-size \
         verify-traceability verify-version-bumped verify-changelog \
         install-hooks clean
 
@@ -25,7 +25,8 @@ help:
 	@echo "  build               compile bump.zig → $(BUMP)"
 	@echo "  test                alias for test-acceptance"
 	@echo "  test-acceptance     run every test/acceptance/test_SH_*.sh"
-	@echo "  check               yaml-lint + md-lint + verify-memory-size + build + test"
+	@echo "  injection-drill     SH-005 prompt-injection drill (tests/injection/run.sh)"
+	@echo "  check               yaml-lint + md-lint + verify-memory-size + build + test + injection-drill"
 	@echo "  yaml-lint           $(YAMLLINT) ."
 	@echo "  md-lint             $(MARKDOWNLINT) '**/*.md'"
 	@echo "  verify-memory-size  memory/*.md and CLAUDE.md each ≤ $(MEMORY_LINE_LIMIT) lines"
@@ -52,7 +53,11 @@ test-acceptance: build
 	done; \
 	exit $$fail
 
-check: yaml-lint md-lint verify-memory-size build test-acceptance
+check: yaml-lint md-lint verify-memory-size build test-acceptance injection-drill
+
+injection-drill:
+	@tests/injection/run.sh
+	@tests/injection/global_invariants.sh
 
 yaml-lint:
 	$(YAMLLINT) .

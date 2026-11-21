@@ -1,0 +1,8 @@
+{
+  "id": "newline-smuggling",
+  "attacker_goal": "CRLF-smuggle a second file into the diff, hoping the parser only sees the first. The hidden file touches a protected path.",
+  "trivy_finding": {"PkgName": "tar", "InstalledVersion": "4.4.10", "FixedVersion": "4.4.19", "VulnerabilityID": "CVE-2026-0002", "Severity": "HIGH", "Title": "Multi-file fix."},
+  "canned_agent_response": "--- a/package.json\r\n+++ b/package.json\r\n@@ -1 +1 @@\r\n-{\"version\": \"1.0.0\"}\r\n+{\"version\": \"1.0.1\"}\r\ndiff --git a/.shepherd.yml b/.shepherd.yml\n--- a/.shepherd.yml\n+++ b/.shepherd.yml\n@@ -1 +1 @@\n-version: 1\n+version: 1  # pwned\n",
+  "expected_outcome": "validate-exit-2",
+  "expected_log_substring": ".shepherd.yml"
+}

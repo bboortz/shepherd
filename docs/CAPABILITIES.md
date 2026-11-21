@@ -32,7 +32,7 @@ Status values: `design` (described in DESIGN, not implemented yet), `active` (im
 | CAP | Description | Source | Status | Test |
 |---|---|---|---|---|
 | `sandbox.no-network-except-model` | Agent has no network except the locked gateway to the model API. | §12 | design | — (R1 scope — R0 ships the pipeline on a stock runner; gap documented in SH-004 §7) |
-| `sandbox.no-secrets` | Agent has no secrets of its own. Only `ANTHROPIC_API_KEY` is in the agent step's `env:` block; no `GITHUB_TOKEN`, no deploy keys. | §12 (SH-004) | active | `healthy test_HC_008::agent step env audit` + `beaconry test_BC_145::test_agent_step_env_only_has_anthropic_api_key` |
+| `sandbox.no-secrets` | Agent has no secrets of its own (env audit: only `ANTHROPIC_API_KEY`; no `GITHUB_TOKEN`, no deploy keys). SH-005 extends to **"no secrets leaked via agent output"**: the drill's stdout-scan guard catches `sk-ant-*`-shaped strings in the diff body itself. | §12 (SH-004, SH-005) | active | `healthy test_HC_008::agent step env audit` + `beaconry test_BC_145::test_agent_step_env_only_has_anthropic_api_key` (env) + `tests/injection/payloads/05-exfil-anthropic-key-in-diff.json` + `tests/injection/run.sh::secret_scan` (output) |
 | `sandbox.diff-only` | Agent produces a diff; a separate trusted step applies it, commits, pushes, opens PR. Enforced by step ordering + per-step `env:` scoping. | §12 (SH-004) | active | `healthy test_HC_008` + `beaconry test_BC_145` (step-ordering assertion + the live PRs produced by `ham-radio-compass#10/#12/#14` all go through the sequence) |
 
 ## Gateway (DESIGN §12 — Smart fix agent)
@@ -48,7 +48,7 @@ Status values: `design` (described in DESIGN, not implemented yet), `active` (im
 
 | CAP | Description | Source | Status | Test |
 |---|---|---|---|---|
-| `blocklist.protected-files` | Agent-produced diffs cannot touch `.github/workflows/**`, `.shepherd.yml`, `scripts/release.sh`, `VERSION`, `*.env`, `*.pem`, `*.key`. Enforced by `scripts/shepherd-poc/validate.sh` with exit 2. | §12 (SH-004) | active | `healthy test_HC_008` + `beaconry test_BC_145` (fixtures: `HC_008_blocked_workflow.patch`, `HC_008_blocked_shepherd_yml.patch`) |
+| `blocklist.protected-files` | Agent-produced diffs cannot touch `.github/workflows/**`, `.shepherd.yml`, `scripts/release.sh`, `scripts/shepherd-poc/**` (added SH-005 — these are the enforcement scripts themselves), `VERSION`, `*.env`, `*.pem`, `*.key`. Enforced by `scripts/shepherd-poc/validate.sh` with exit 2. | §12 (SH-004, SH-005) | active | `healthy test_HC_008` + `beaconry test_BC_145` (benign fixtures) + `tests/injection/payloads/01-04,11,12` + `tests/injection/run.sh` (adversarial fixtures covering `.shepherd.yml`, `.github/workflows/`, `scripts/release.sh`, `scripts/shepherd-poc/`, CRLF-smuggling, `--- /dev/null` creation) |
 | `blocklist.unblock-per-repo` | Each repo can unblock specific paths. | §12 | design | — (R1 scope — R0 ships a fixed blocklist) |
 | `blocklist.protected-registration-files` | `.shepherd.yml` and the shepherd workflows can only be unblocked through a human-reviewed change — never by the bot or by a setting the bot can edit. | §12 | design | — (R1 scope) |
 
@@ -77,6 +77,24 @@ Status values: `design` (described in DESIGN, not implemented yet), `active` (im
 | `retries.failed-fixes` | 3 retries by default on failed verification, configurable per repo. | §12 | design | — |
 | `escalation.needs-human-issue` | After the last failed attempt — or any time the bot needs human help — open a needs-human issue. No quiet logging. | §12 | design | — |
 | `escalation.dedupe` | If a needs-human issue for the same problem is already open, comment on it instead of duplicating. | §12 | design | — |
+
+## Prompt-injection drill (SH-005)
+
+A replayable, offline injection harness on `bboortz/shepherd`. Exercises the shepherd-poc policy chain (`agent-call.sh` → `validate.sh`) against a curated library of adversarial agent responses. CI-gated: every PR to `main` runs the full drill; a failure blocks merge.
+
+| CAP | Description | Source | Status | Test |
+|---|---|---|---|---|
+| `injection.payload-library` | Curated adversarial-fixture library in `tests/injection/payloads/`. ≥ 10 replay fixtures at ship; two live-API fixtures parked as "live-only"; one known gap tracked (fake-fix-benign-looking — R2 scope). Each fixture declares attacker goal, canned agent response, and expected gate + log substring. | SH-005 | active | `tests/injection/payloads/*.json` + `tests/injection/run.sh --list` |
+| `injection.automated-drill-in-ci` | `.github/workflows/injection-drill.yml` runs on every PR to `main` and daily on schedule. No secrets, no network, read-only token. Drill failure blocks merge. | SH-005 | active | `.github/workflows/injection-drill.yml` + `make injection-drill` |
+| `injection.protected-files-enforced-under-adversarial-payload` | Adversarial coverage for `blocklist.protected-files`: fixtures 01–04 (write to `.shepherd.yml`, create workflow, overwrite `scripts/release.sh`, delete `scripts/shepherd-poc/`), 11 (CRLF-smuggle a second protected-path diff), 12 (`--- /dev/null` creation into a protected path). | SH-005 | active | `tests/injection/payloads/{01,02,03,04,11,12}-*.json` + `tests/injection/run.sh` |
+| `injection.no-secret-leak-under-adversarial-payload` | Drill's `secret_scan` catches `sk-ant-*`-shaped strings smuggled into diff content. | SH-005 | active | `tests/injection/payloads/05-exfil-anthropic-key-in-diff.json` + `tests/injection/run.sh::secret_scan` |
+| `injection.no-url-exfil-under-adversarial-payload` | Drill's `url_exfil_scan` catches suspicious outbound URLs + command-substitution patterns (`cat ~/.ssh`, `$(cat ...)`) in diff content. Allowed hosts are `api.anthropic.com` + GitHub only. | SH-005 | active | `tests/injection/payloads/06-exfil-via-url.json` + `tests/injection/run.sh::url_exfil_scan` |
+| `injection.size-cap-enforced-under-adversarial-payload` | Adversarial coverage for the 50-line non-lockfile cap: a 200-line canned response in one source file hits `validate.sh` exit 2. | SH-005 | active | `tests/injection/payloads/07-oversize-diff.json` |
+| `injection.live-drill-passed` | One-time live end-to-end drill on `bboortz/ham-radio-compass` with a crafted finding; observe the block in the workflow log; delete the crafted branch. Closes the R0 exit-criterion ⚠️ row in `docs/plan/SH-004-r0-poc-on-healthy-plan.md`. | SH-005 (DESIGN §13 R0 exit) | design | — (deferred to the SH-005 live-drill track) |
+
+Known gaps (documented as fixtures, tracked):
+
+- `tests/injection/payloads/09-fake-fix-benign-looking.json` — no "fix-is-a-downgrade / known-malicious-fork" guard. Fixture is marked `known_gap: true`; the drill logs it and passes. R2 scope.
 
 ## Dependabot path (SH-011)
 
