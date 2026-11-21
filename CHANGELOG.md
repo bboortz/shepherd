@@ -8,6 +8,16 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+## [v0.3.2] — 2026-11-21 — SH-011 bugfix: `gh pr view/merge` needs `-R`
+
+### Fixed
+
+- `templates/dependabot-automerge.yml` was calling `gh pr view "$PR_NUMBER"` and `gh pr merge "$PR_NUMBER"` without `-R owner/repo`. The workflow has no `actions/checkout` step, so `gh` had no git context and failed with `fatal: not a git repository`. The bug was latent on `ham-radio-compass` because every PR there was a major bump and short-circuited before the broken call; it surfaced on `beaconry` where patch/minor PRs reached the diff-size gate and crashed the workflow.
+- Added test assertion: every `gh pr view` / `gh pr merge` line in the template must carry `-R`. `test/acceptance/test_SH_011_dependabot.sh` now 25/0.
+- New `REPO: ${{ github.repository }}` in the workflow's env block so both calls can use `-R "$REPO"`.
+
+Affected managed repos: `ham-radio-compass` (no observable impact — everything was major anyway) and `beaconry` (workflow re-copied). Follow-up required: re-copy `templates/dependabot-automerge.yml` into each auto-merge-opted-in managed repo.
+
 ## [v0.3.1] — 2026-11-21 — SH-011: pip ecosystem release-date lookup
 
 ### Added
