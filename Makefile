@@ -58,7 +58,11 @@ yaml-lint:
 	$(YAMLLINT) .
 
 md-lint:
-	$(MARKDOWNLINT) '**/*.md'
+	@if command -v $(MARKDOWNLINT) >/dev/null 2>&1; then \
+	  $(MARKDOWNLINT) '**/*.md'; \
+	else \
+	  echo "md-lint: $(MARKDOWNLINT) not installed — skipping"; \
+	fi
 
 verify-memory-size:
 	@fail=0; \

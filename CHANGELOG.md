@@ -9,9 +9,53 @@ All notable changes to `shepherd` are recorded here. The format is based on
 Tracking Release 0 (POC) work in `bboortz/healthy` and the Release 1 Action
 that will land back in this repo. See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
-### Added
+## [v0.1.0] — 2026-11-21
 
-- `docs/FLEET.md` — opt-in fleet registry. First entry: `bboortz/healthy` as the R0 pilot (2026-11-21). The `shepherd-managed` GitHub topic is applied to each listed repo per `docs/DESIGN.md §2`. Until the fleet layer activates after R3, this file *is* the registry.
+First feature release. Retires Renovate from shepherd's fleet scaffold and
+introduces `shepherd-bump`, a first-party Zig single-file tool that
+discovers SHA-pinned GitHub Action references across the repo.
+
+### Added (SH-001)
+
+- `bump.zig` (~330 lines, Zig 0.17.1) — single-file source. `--list` mode
+  parses `.github/workflows/*.yml` and `.github/actions/**/action.yml`,
+  discovers `uses: owner/repo@<40-hex>  # vX.Y.Z` lines, emits
+  deterministic tab-separated output. Non-pinned refs are skipped.
+- `build.zig` — stock Zig build script. `zig build --prefix .` produces
+  `bin/shepherd-bump`.
+- `.github/workflows/bump.yml` — cron (04:00 UTC) + `workflow_dispatch`;
+  installs Zig 0.17.1, builds shepherd-bump, runs `--list`. The `--check`
+  and `--pr` steps are scaffolded as comments; implementation lands in
+  SH-002 / SH-003.
+- `test/acceptance/test_SH_001_retire_renovate.sh` — 21 assertions.
+  Covers Scenarios 1–2 and the SHA-format invariant.
+- `Makefile` targets: `build`, `test`, `test-acceptance`. `check` wires
+  them in alongside the existing lint gates.
+- `docs/FLEET.md` from the previous commit cycle; this release records it.
+
+### Removed (SH-001)
+
+- `.github/workflows/renovate.yml`
+- `renovate/default.json` (and the empty `renovate/` directory)
+- All references to `renovatebot/github-action` — enforced by the
+  acceptance test, so this invariant stays true going forward.
+
+### Changed (SH-001)
+
+- `VERSION`: `0.0.0` → `0.1.0`.
+- `docs/DESIGN.md §2 / §4 / §7 / §11 / §12 / §13` — described in the
+  SH-001 draft commit.
+- `docs/CAPABILITIES.md` — new Supply chain + Bump engine sections; the
+  SH-001-delivered CAPs flip to `in-progress`.
+
+### Deferred
+
+- `shepherd-bump --check` — upstream-tag resolution, semver, annotated-tag
+  dereference, highest-in-major, orphan detection. Scoped to **SH-002**.
+- `shepherd-bump --pr` — commit + push + PR opening via
+  `SHEPHERD_BUMP_TOKEN`. Scoped to **SH-003**.
+- `scripts/check-commit-msg.sh` and `scripts/verify-traceability.sh`
+  ports from `bboortz/healthy` — scoped to a follow-up `chore/` branch.
 
 ## [v0.0.0] — 2026-11-19
 

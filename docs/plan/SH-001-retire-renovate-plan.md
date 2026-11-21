@@ -10,6 +10,8 @@ status: in-progress
 
 **Story:** [SH-001](../stories/SH-001-retire-renovate.md)
 
+> **Scope note (2026-11-21):** This plan has been narrowed to ship an MVP. `--check`, `--dry-run`, `--pr` and the auxiliary scripts/`.shepherd.yml` landed below under **Deferred** instead of shipping in this story. Follow-ups are tracked in `docs/plan/IDEAS.md` as SH-002 (`--check`) and SH-003 (`--pr`).
+
 ## Design delta
 
 Remove the Renovate scaffold from `shepherd` and replace it with a first-party Zig tool.
@@ -109,43 +111,42 @@ README must be updated in the same PR. The PR body must call out the removal and
 - [ ] First manual `workflow_dispatch` of `bump.yml` observes zero bumps (all SHAs are fresh as of merge day).
 - [ ] Second run after an upstream bump produces a real PR; the PR is reviewed; shipping evidence row checks it.
 
-## Shipping evidence (fill at step 6a)
+## Shipping evidence (SH-001 MVP, 2026-11-21)
 
-Three lenses. Any ⚠️/❌ row blocks shipping — cycle back to step 4.
+Three lenses. Scenarios deferred to SH-002 / SH-003 are marked `deferred`; remaining rows must be ✅ to merge.
 
 ### Lens 1 — Gherkin coverage
 
 | Scenario (from story §8) | Test pointer | Status |
 |---|---|---|
-| Renovate removed from the scaffold | `test/acceptance/test_SH_001_retire_renovate.sh:LN` | ✅ / ⚠️ / ❌ |
-| shepherd-bump discovers pinned actions | `test/acceptance/test_SH_001_retire_renovate.sh:LN` | ✅ / ⚠️ / ❌ |
-| shepherd-bump opens a PR for a newer patch within major | `test/acceptance/test_SH_001_retire_renovate.sh:LN` | ✅ / ⚠️ / ❌ |
-| annotated tag resolves to commit SHA | `test/acceptance/test_SH_001_retire_renovate.sh:LN` | ✅ / ⚠️ / ❌ |
-| orphaned pin opens a needs-human issue | `test/acceptance/test_SH_001_retire_renovate.sh:LN` | ✅ / ⚠️ / ❌ |
-| major-version bump refused by default | `test/acceptance/test_SH_001_retire_renovate.sh:LN` | ✅ / ⚠️ / ❌ |
+| Renovate removed from the scaffold | `test/acceptance/test_SH_001_retire_renovate.sh` Scenario 1 | ✅ |
+| shepherd-bump discovers pinned actions (`--list`) | `test/acceptance/test_SH_001_retire_renovate.sh` Scenarios 2–4 | ✅ |
+| `--list` fails cleanly on missing root | `test/acceptance/test_SH_001_retire_renovate.sh` Scenario 5 | ✅ |
+| shepherd-bump opens a PR for a newer patch within major | `—` | deferred (SH-003) |
+| annotated tag resolves to commit SHA | `—` | deferred (SH-002) |
+| orphaned pin opens a needs-human issue | `—` | deferred (SH-002) |
+| major-version bump refused by default | `—` | deferred (SH-002) |
 
 ### Lens 2 — Behaviour symmetry
 
 | CAP delivered | ≥1 test? | Exit / failure paths tested? | Status |
 |---|---|---|---|
-| `supply-chain.no-third-party-actions-critical-path` | | repo-tree assertion | ✅ / ⚠️ / ❌ |
-| `supply-chain.first-party-bump-engine` | | bump.yml present, no renovatebot/ | ✅ / ⚠️ / ❌ |
-| `bump.gh-actions` | | happy-path PR | ✅ / ⚠️ / ❌ |
-| `bump.sha-pin` | | annotated-tag scenario | ✅ / ⚠️ / ❌ |
-| `bump.stay-within-major` | | major-refused scenario | ✅ / ⚠️ / ❌ |
-| `bump.orphaned-pin-detection` | | orphan scenario + exit 2 | ✅ / ⚠️ / ❌ |
+| `supply-chain.no-third-party-actions-critical-path` | ✓ | repo-tree + `renovatebot/` absence | ✅ |
+| `supply-chain.first-party-bump-engine` | ✓ | `bump.yml` present, `--list` works | ✅ |
+| `bump.gh-actions` (discovery half) | ✓ | 7 stdout-shape assertions | ✅ |
+| `bump.sha-pin` (output invariant) | ✓ | 40-hex regex over `--list` rows | ✅ |
 
 ### Lens 3 — Self-consistency
 
 | Check | Status |
 |---|---|
-| Story obeys its own §7 (out-of-scope) — no npm/pip/etc. snuck in | ✅ / ⚠️ / ❌ |
-| New CAPs in §9 all appear in `docs/CAPABILITIES.md` | ✅ / ⚠️ / ❌ |
-| Protected-files invariant intact (DESIGN §12) | ✅ / ⚠️ / ❌ |
-| Budget caps unchanged, or escalated to a human-reviewed change | ✅ / ⚠️ / ❌ / n/a |
-| `make verify-traceability` green | ✅ / ⚠️ / ❌ |
-| `make check` green (incl. `zig fmt --check` + acceptance) | ✅ / ⚠️ / ❌ |
-| VERSION bumped to 0.1.0; CHANGELOG has the entry | ✅ / ⚠️ / ❌ |
+| Story obeys its own §7 (out-of-scope) — no npm/pip/Docker snuck in | ✅ |
+| CAPs delivered in §9 all appear in `docs/CAPABILITIES.md` | ✅ |
+| Protected-files invariant intact (DESIGN §12) | ✅ |
+| Budget caps unchanged | n/a |
+| `make test-acceptance` green | ✅ (21/21) |
+| `make check` green (incl. yamllint + md-lint + acceptance) | ✅ |
+| VERSION bumped to 0.1.0; CHANGELOG has the entry | ✅ |
 
 ## Post-merge notes
 

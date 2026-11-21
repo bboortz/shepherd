@@ -56,19 +56,19 @@ Status values: `design` (described in DESIGN, not implemented yet), `active` (im
 
 | CAP | Description | Source | Status | Test |
 |---|---|---|---|---|
-| `supply-chain.no-third-party-actions-critical-path` | No third-party GitHub Actions in shepherd's critical path. Exceptions: `actions/*` (GitHub-native), SHA-pinned only. | §12 (SH-001) | design | — |
-| `supply-chain.first-party-bump-engine` | Shepherd operates its own bump path end-to-end; no reliance on Renovate or similar third-party services. | §4, §7 (SH-001) | design | — |
-| `supply-chain.sha-pin-all-actions` | Every `uses:` line in `.github/workflows/` references a commit SHA, never a mutable tag. | §12 | active | repo-tree assertion (CI, R1+) |
+| `supply-chain.no-third-party-actions-critical-path` | No third-party GitHub Actions in shepherd's critical path. Exceptions: `actions/*` (GitHub-native), SHA-pinned only. Trivy wrapper replacement tracked in IDEAS. | §12 (SH-001) | active | `test/acceptance/test_SH_001_retire_renovate.sh` (renovatebot/ absence + Renovate-file absence) |
+| `supply-chain.first-party-bump-engine` | Shepherd operates its own bump path; no reliance on Renovate or similar third-party services. | §4, §7 (SH-001) | active | `test/acceptance/test_SH_001_retire_renovate.sh` (bump.yml present; renovatebot/ absent) |
+| `supply-chain.sha-pin-all-actions` | Every `uses:` line in `.github/workflows/` references a 40-hex commit SHA. | §12 | active | `test/acceptance/test_SH_001_retire_renovate.sh` (SHA-format invariant over `shepherd-bump --list`) |
 
-## Bump engine (SH-001)
+## Bump engine (SH-001 → SH-003)
 
 | CAP | Description | Source | Status | Test |
 |---|---|---|---|---|
-| `bump.gh-actions` | Discover and bump `uses: owner/repo@<sha>` lines across `.github/workflows/*.yml` and `.github/actions/**/action.yml`. | SH-001 | design | — |
-| `bump.sha-pin` | Write a commit SHA, never a tag or tag-object SHA. Dereference annotated tags. | SH-001 | design | — |
-| `bump.stay-within-major` | Default: latest patch within the current major. Major bumps require explicit opt-in. | SH-001 | design | — |
-| `bump.open-pr-grouped` | One PR per bumpable dep (v1); grouping per ecosystem per schedule in a follow-up. | SH-001 | design | — |
-| `bump.orphaned-pin-detection` | Detect pinned SHAs that no longer match any upstream tag; open a needs-human issue rather than silently rewriting. | SH-001 | design | — |
+| `bump.gh-actions` (discovery) | Discover `uses: owner/repo@<sha>` lines across `.github/workflows/*.yml` and `.github/actions/**/action.yml`. | SH-001 | in-progress | `test/acceptance/test_SH_001_retire_renovate.sh` (`--list` output shape) |
+| `bump.sha-pin` (output invariant) | `--list` never emits non-40-hex refs; `--check` / `--pr` write only commit SHAs, dereferencing annotated tags. | SH-001 | in-progress | `test/acceptance/test_SH_001_retire_renovate.sh` (SHA-format invariant) |
+| `bump.stay-within-major` | Default: latest patch within the current major. Major bumps require explicit opt-in. | SH-002 | design | — |
+| `bump.open-pr-grouped` | One PR per bumpable dep; grouping per ecosystem per schedule in a follow-up. | SH-003 | design | — |
+| `bump.orphaned-pin-detection` | Detect pinned SHAs that no longer match any upstream tag; open a needs-human issue rather than silently rewriting. | SH-002 | design | — |
 
 ## Failures and escalation (DESIGN §12)
 

@@ -27,7 +27,8 @@ jobs:
           "$HOME/.zig/zig" version
 
       - name: Build shepherd-bump
-        run: "$HOME/.zig/zig" build --prefix .
+        run: |
+          "$HOME/.zig/zig" build --prefix .
 
       - name: Discover pinned actions (shepherd-bump --list)
         run: ./bin/shepherd-bump --list --root .
