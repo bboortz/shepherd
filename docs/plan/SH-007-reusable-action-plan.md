@@ -191,8 +191,17 @@ Dispatched [`shepherd-poc.yml` on `bboortz/healthy`](https://github.com/bboortz/
 
 **End-to-end result:** the reusable Action successfully runs on a managed repo via a thin caller. The `github.job_workflow_sha` inner-checkout pinning works in practice. The clean-state short-circuit path is intact. No PR opened (correctly — no findings). No regressions vs the pre-migration flow.
 
-### Follow-ups
+### Beaconry + HRC migrations (same day, 2026-11-21)
 
-- **Migrate `beaconry` + `ham-radio-compass`** to the reusable Action. Same pattern as the healthy canary: thin caller SHA-pinned to `bboortz/shepherd@3550c80` + delete `scripts/shepherd-poc/`. Next ship.
-- **Validate the agent-produces-diff path** — the canary ran on a clean repo (rc=1 short-circuit). Still need a run where `rc=0` so the remaining 5 steps actually execute. Easiest: wait for HRC to produce a finding (daily cron at 06:00 UTC) and watch that run. If none within a day, reintroduce one of the known fixed CVEs on a scratch branch of HRC.
-- **R1 release tagging (`v1.0.0`)** — after SH-008 (sandbox), SH-009 (gates), SH-010 (waiting-period) ship. Caller templates will then switch from `@main` / `@<sha>` to `@v1.0.0`.
+| PR | Repo | Result |
+|---|---|---|
+| [beaconry #79](https://github.com/bboortz/beaconry/pull/79) | beaconry | merged; dispatch [run 44938849319](https://github.com/bboortz/beaconry/actions/runs/44938849319) ✅ end-to-end (verify-yml OK → Trivy clean → agent "no findings" → rc=1 short-circuit) |
+| [ham-radio-compass #44](https://github.com/bboortz/ham-radio-compass/pull/44) | HRC | merged via `--admin` (branch protection required `gate` which skips on non-Dependabot PRs). Dispatch [run 44938852610](https://github.com/bboortz/ham-radio-compass/actions/runs/44938852610) ✅ end-to-end. **Dropped** `inject_fixture` workflow_dispatch input (one-off R0 closer already fired). |
+
+**Net:** all three R0 pilots (healthy, beaconry, ham-radio-compass) are now on the SH-007 reusable Action. `scripts/shepherd-poc/` has been deleted from all three — shepherd is the canonical source. Daily cron schedules preserved (05:00 / 05:30 / 06:00 UTC).
+
+### Remaining follow-ups
+
+- **Validate the agent-produces-diff path (`rc=0`)** — all three canary dispatches ran on clean repos (short-circuit after agent-call exit 1). Still need a run where the agent actually produces a diff so the remaining 5 steps (validate → setup-node → regen-lockfile → validate-combined → open-pr) execute. HRC's next finding or a crafted scratch branch should trigger this.
+- **R1 release tagging (`v1.0.0`)** — after SH-008 (sandbox), SH-009 (gates), SH-010 (waiting-period) ship. Caller templates will then switch from `@<sha>` to `@v1.0.0`.
+- **HRC branch-protection quirk** — required check is `gate`, which never fires on non-Dependabot PRs. Causes `gh pr merge` on human PRs to need `--admin`. Possible fixes: (a) change required check to something that runs on all PRs, (b) add a trivial always-passing workflow on HRC, (c) leave as-is — admin merges are rare. Ties into the SH-012 branch-protection verifier (IDEAS).
