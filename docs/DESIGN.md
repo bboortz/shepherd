@@ -32,6 +32,7 @@ shepherd/
     shepherd.yml           # registration file copied into each repo
     caller-verify.yml      # tiny workflow copied into each repo
   docs/
+    FLEET.md               # repos using shepherd, per release line (opt-in registry)
     needs-human.md         # template for escalation issues
 ```
 

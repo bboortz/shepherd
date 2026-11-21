@@ -28,6 +28,10 @@ From `docs/DESIGN.md §12`:
 
 The fleet layout in `docs/DESIGN.md §2` (discover.yml, central bot, GitHub App) is **superseded** for the first public version. It stays scaffolded here so the shape is obvious, but it doesn't activate until after Release 3.
 
+## Fleet registry
+
+[`docs/FLEET.md`](../docs/FLEET.md) is the canonical list of repos using Shepherd. Each entry also carries the `shepherd-managed` GitHub topic (DESIGN.md §2). Until the fleet layer activates after R3, FLEET.md *is* the registry; after that, topic search takes over and FLEET.md becomes the human-readable mirror.
+
 ## What is NOT in scope
 
 - No macOS or Windows runners. Linux only.

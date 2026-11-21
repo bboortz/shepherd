@@ -9,6 +9,10 @@ All notable changes to `shepherd` are recorded here. The format is based on
 Tracking Release 0 (POC) work in `bboortz/healthy` and the Release 1 Action
 that will land back in this repo. See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+### Added
+
+- `docs/FLEET.md` — opt-in fleet registry. First entry: `bboortz/healthy` as the R0 pilot (2026-11-21). The `shepherd-managed` GitHub topic is applied to each listed repo per `docs/DESIGN.md §2`. Until the fleet layer activates after R3, this file *is* the registry.
+
 ## [v0.0.0] — 2026-11-19
 
 Pre-release scaffold. Not tagged or published yet.

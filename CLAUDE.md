@@ -17,6 +17,7 @@ Public contract (eventually): `README.md` and files under `templates/`. Internal
 docs/
   DESIGN.md              — source of truth for product, trust boundary, releases
   CAPABILITIES.md        — capability matrix; bidirectional links to tests (grows with code)
+  FLEET.md               — repos using Shepherd, per release line (opt-in registry)
   needs-human.md         — escalation issue template
   stories/
     INDEX.md             — status board (grep-friendly), created when first story lands
