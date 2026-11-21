@@ -1,8 +1,9 @@
 ---
 id: SH-010
 slug: waiting-period
-status: in-progress
+status: shipped
 created: 2026-11-21
+shipped: 2026-11-21
 owner: @benni
 parent: SH-006
 ---
