@@ -8,7 +8,7 @@ Not-yet-promoted ideas. New ideas land here immediately, even if we won't pick t
 - **[SH-004](../stories/SH-004-r0-poc-on-healthy.md) — Release 0 POC.** Status: **shipped** 2026-11-21. 3 real agent-produced CVE fixes merged on `bboortz/ham-radio-compass`.
 - **[SH-005](../stories/SH-005-prompt-injection.md) — Prompt-injection drill.** Status: ready. Blocks SH-007 merge; closes R0 exit-criterion ⚠️ row.
 - **[SH-006](../stories/SH-006-r1-reusable-action.md) — R1 umbrella.** Status: ready. Decomposes to SH-007 (reusable Action), SH-008 (sandbox perimeter), SH-009 (auto-merge gates), SH-010 (waiting-period). Target ship: Fri 4 Dec 2026 per DESIGN §13.
-- **[SH-011](../stories/SH-011-dependabot-enforce-automerge.md) — Dependabot baseline.** Status: in-progress. Enforces `.github/dependabot.yml` on managed repos; adds opt-in gated auto-merge (patch/minor, ≤50 lines, ≥24h release-age). `gate.scan-not-worse` deferred to SH-009 (documented gap).
+- **[SH-011](../stories/SH-011-dependabot-enforce-automerge.md) — Dependabot baseline.** Status: **shipped** 2026-11-21 (v0.3.0, PR #2). Enforces `.github/dependabot.yml` on managed repos; opt-in gated auto-merge (patch/minor, ≤50 lines, ≥24h release-age). `gate.scan-not-worse` deferred to SH-009 (documented gap). Rollout to pilots in-progress.
 
 ## shepherd-bump — split from SH-001
 

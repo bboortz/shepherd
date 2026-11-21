@@ -3,7 +3,9 @@ id: SH-011
 slug: dependabot-enforce-automerge
 story: docs/stories/SH-011-dependabot-enforce-automerge.md
 branch: feat/SH-011-dependabot-enforce-automerge
-status: in-progress
+status: shipped
+shipped: 2026-11-21
+merge_commit: d313da8
 ---
 
 # SH-011 plan — Dependabot baseline: enforce presence + opt-in gated auto-merge
