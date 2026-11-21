@@ -1,7 +1,7 @@
 ---
 id: SH-005
 slug: prompt-injection
-status: ready
+status: in-progress
 created: 2026-11-21
 owner: @benni
 ---

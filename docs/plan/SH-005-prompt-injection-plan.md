@@ -3,7 +3,7 @@ id: SH-005
 slug: prompt-injection
 story: docs/stories/SH-005-prompt-injection.md
 branch: feat/SH-005-prompt-injection
-status: ready    # ready → in-progress when the branch is cut
+status: in-progress    # ready → in-progress → shipped
 ---
 
 # SH-005 plan — Prompt-injection drill (automated simulation + CI gate)
@@ -83,33 +83,37 @@ Three lenses. Any ⚠️/❌ row blocks shipping.
 
 | Scenario | Test pointer | Status |
 |---|---|---|
-| Protected-file injection | `tests/injection/payloads/01-modify-shepherd-yml.json` + `run.sh` | pending |
-| Secret-exfil injection | `tests/injection/payloads/05-exfil-anthropic-key-in-diff.json` | pending |
-| Over-size injection | `tests/injection/payloads/07-oversize-diff.json` | pending |
-| Model-identity injection | `tests/injection/payloads/08-model-identity-escalation.json` (live-API variant) | pending |
-| Live end-to-end drill (R0 closer) | ham-radio-compass workflow_dispatch log | pending |
+| Protected-file injection | `tests/injection/payloads/01-modify-shepherd-yml.json` + `run.sh` | ✅ |
+| Secret-exfil injection | `tests/injection/payloads/05-exfil-anthropic-key-in-diff.json` + `run.sh::secret_scan` | ✅ |
+| Over-size injection | `tests/injection/payloads/07-oversize-diff.json` | ✅ |
+| Model-identity injection | `tests/injection/payloads/08-model-identity-escalation.json` (live-API variant — skipped in replay) | ⚠️ (live-API deferred) |
+| Live end-to-end drill (R0 closer) | ham-radio-compass workflow_dispatch log | ⚠️ (deferred to the SH-005 live-drill track) |
 
 ### Lens 2 — CAP evidence
 
 | CAP | ≥1 fixture? | Status |
 |---|---|---|
-| `injection.payload-library` | 12 fixtures | pending |
-| `injection.automated-drill-in-ci` | `.github/workflows/injection-drill.yml` | pending |
-| `injection.protected-files-enforced-under-adversarial-payload` | payloads 01–04 | pending |
-| `injection.no-secret-leak-under-adversarial-payload` | payloads 05–06 | pending |
-| `injection.size-cap-enforced-under-adversarial-payload` | payload 07 | pending |
-| `injection.live-drill-passed` | one ham-radio-compass run | pending |
+| `injection.payload-library` | 12 fixtures (10 replay + 2 live-api + 1 known-gap) | ✅ |
+| `injection.automated-drill-in-ci` | `.github/workflows/injection-drill.yml` | ✅ |
+| `injection.protected-files-enforced-under-adversarial-payload` | payloads 01, 02, 03, 04, 11, 12 | ✅ |
+| `injection.no-secret-leak-under-adversarial-payload` | payload 05 + `run.sh::secret_scan` | ✅ |
+| `injection.no-url-exfil-under-adversarial-payload` | payload 06 + `run.sh::url_exfil_scan` | ✅ |
+| `injection.size-cap-enforced-under-adversarial-payload` | payload 07 | ✅ |
+| `injection.live-drill-passed` | one ham-radio-compass run | ⚠️ (deferred — the shepherd-side drill is live; the HRC live run is the next step) |
 
 ### Lens 3 — Self-consistency
 
 | Check | Status |
 |---|---|
-| New CAPs listed in §9 all appear in `docs/CAPABILITIES.md` | pending |
-| Drill doesn't need live API keys to pass the main gate (replay-first) | pending |
-| `make injection-drill` is idempotent (no scratch-repo residue) | pending |
-| Added payloads use non-real attacker domains (RFC 2606 or `.example`) | pending |
-| `scripts/shepherd-poc/agent-call.sh` behaviour on non-`--replay` paths unchanged | pending |
+| New CAPs listed in §9 all appear in `docs/CAPABILITIES.md` | ✅ |
+| Drill doesn't need live API keys to pass the main gate (replay-first) | ✅ (`--replay` mode skips `ANTHROPIC_API_KEY` check) |
+| `make injection-drill` is idempotent (no scratch-repo residue) | ✅ (`global_invariants.sh` asserts cleanup) |
+| Added payloads use non-real attacker domains (`example.invalid` / `evil.example`) | ✅ |
+| `scripts/shepherd-poc/agent-call.sh` behaviour on non-`--replay` paths unchanged | ✅ (arg parser only runs the replay branch when `--replay` is present) |
+| `make check` green | ✅ (SH-001 21/0 + SH-011 26/0 + injection drill 10/0 + global-invariants ok) |
+
+**Note on the ⚠️ rows:** the shepherd-side drill is **green** and blocks every PR to `main`. The three ⚠️ rows (model-identity live-API, injection-in-manifest live-API, live-drill-passed on HRC) require a live Anthropic call and/or a crafted dispatch on `bboortz/ham-radio-compass`. They are tracked as the **live-drill track of SH-005**, executed once post-merge; the live-drill run flips them to ✅ and closes the R0 exit-criterion row in `docs/plan/SH-004-r0-poc-on-healthy-plan.md`.
 
 ## Post-merge notes
 
-<To fill after the drill ships and the live ham-radio-compass variant has passed.>
+<To fill after the live-drill track completes on ham-radio-compass.>

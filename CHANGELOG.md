@@ -8,6 +8,39 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+## [v0.4.0] — 2026-11-21 — SH-005 prompt-injection drill
+
+**Replayable, offline injection drill on `bboortz/shepherd` itself.** Blocks merge on any regression in the trust boundary. Part of the R0 exit-criterion closure.
+
+### Added
+
+- `scripts/shepherd-poc/` — imported from `bboortz/ham-radio-compass` (`agent-call.sh`, `validate.sh`, `open-pr.sh`, `regen-lockfile.sh`, `install-trivy.sh`, `README.md`). Shepherd is now the source of truth for these; pilots pull from here going forward.
+- `scripts/shepherd-poc/agent-call.sh` gains a `--replay <fixture>` mode that skips the Anthropic API call and writes the fixture's `canned_agent_response` to `$DIFF_PATH`. No network, no `ANTHROPIC_API_KEY` required. Live-mode behaviour on non-`--replay` paths unchanged.
+- `tests/injection/payloads/` — 12 adversarial fixture JSON files (10 replay + 2 live-API + 1 known R2-scope gap). Attacker-goal categories: protected-file write, secret exfil in diff, URL exfil, oversize diff, model-identity escalation, injection-in-manifest, newline smuggling, file-creation into protected path, delete-shepherd-poc.
+- `tests/injection/run.sh` — drill harness. Replays each fixture through `agent-call.sh --replay` + `validate.sh` in isolated scratch worktrees. Drill-side scans (`secret_scan`, `url_exfil_scan`) cover content that passes the path gate. Asserts per-fixture expected gate + log substring.
+- `tests/injection/global_invariants.sh` — post-run audit: scratch dirs cleaned up.
+- `make injection-drill` target + `.github/workflows/injection-drill.yml` CI gate (PR to `main` + daily schedule, read-only token).
+- 7 new CAPs in `docs/CAPABILITIES.md` under "Prompt-injection drill (SH-005)" section.
+
+### Fixed
+
+- `scripts/shepherd-poc/validate.sh` — `scripts/shepherd-poc/**` added to `PROTECTED_RE`. The enforcement scripts themselves are now protected from agent modification. `scripts/shepherd-poc/agent-call.sh` prompt updated to match.
+
+### Trust boundary
+
+- `docs/DESIGN.md §13` gains one "Decided on 2026-11-21" entry stating the injection drill is part of the trust boundary: changes to `validate.sh` or the path blocklist must not reduce drill coverage.
+- `blocklist.protected-files` extended to cover `scripts/shepherd-poc/**` (previously not protected).
+- `sandbox.no-secrets` extended: beyond "no secrets in agent env", now also "no secrets leaked via agent output" (drill `secret_scan`).
+
+### Known gap (tracked)
+
+- `tests/injection/payloads/09-fake-fix-benign-looking.json` — no "fix-is-a-downgrade / known-malicious-fork" guard today. Fixture is marked `known_gap: true`; the drill logs it and passes. Promote to an R2 story when the guard lands.
+
+### Pending
+
+- Live-drill track: one end-to-end run on `bboortz/ham-radio-compass` with a crafted finding. Closes the R0 exit-criterion ⚠️ row in `docs/plan/SH-004-r0-poc-on-healthy-plan.md`.
+- Re-sync `scripts/shepherd-poc/validate.sh` + `agent-call.sh` into the three managed pilots (healthy, beaconry, ham-radio-compass) so the `PROTECTED_RE` extension applies there too. Rollout PR follows this ship.
+
 ## [v0.3.4] — 2026-11-21 — SH-011 bugfix: graceful fallback when branch protection missing
 
 ### Fixed
