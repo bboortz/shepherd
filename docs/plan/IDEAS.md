@@ -4,7 +4,10 @@ Not-yet-promoted ideas. New ideas land here immediately, even if we won't pick t
 
 ## Promoted
 
-- **[SH-001](../stories/SH-001-retire-renovate.md) — Retire Renovate; add `shepherd-bump --list` for GitHub Actions.** Status: in-progress → shipping as v0.1.0 (2026-11-21). Scope narrowed to `--list` + Renovate removal. `--check` and `--pr` promoted to SH-002 and SH-003 below.
+- **[SH-001](../stories/SH-001-retire-renovate.md) — Retire Renovate; add `shepherd-bump --list` for GitHub Actions.** Status: **shipped** 2026-11-21 (v0.1.0). Scope narrowed to `--list` + Renovate removal. `--check` and `--pr` promoted to SH-002/003 below.
+- **[SH-004](../stories/SH-004-r0-poc-on-healthy.md) — Release 0 POC.** Status: **shipped** 2026-11-21. 3 real agent-produced CVE fixes merged on `bboortz/ham-radio-compass`.
+- **[SH-005](../stories/SH-005-prompt-injection.md) — Prompt-injection drill.** Status: ready. Blocks SH-007 merge; closes R0 exit-criterion ⚠️ row.
+- **[SH-006](../stories/SH-006-r1-reusable-action.md) — R1 umbrella.** Status: ready. Decomposes to SH-007 (reusable Action), SH-008 (sandbox perimeter), SH-009 (auto-merge gates), SH-010 (waiting-period). Target ship: Fri 4 Dec 2026 per DESIGN §13.
 
 ## shepherd-bump — split from SH-001
 
@@ -38,6 +41,6 @@ One story per ecosystem. Each extends `shepherd-bump` (Zig single-file budget pe
 
 ## Candidates from DESIGN.md §13 principles
 
-- **Dry-run mode as the first experience.** The Action should comment what it would do and change nothing on the very first run. Needs a story so the behaviour is tested.
-- **Zero-config defaults.** `.shepherd.yml` is optional. A story should pin the exact defaults (and where they're listed, so they don't drift from DESIGN).
-- **Built-in gateway with network lockdown.** The Action pins network egress to the model API only. Needs a story for the Linux runner implementation (iptables / nftables / network namespace) and the self-test that proves lockdown.
+- **Dry-run mode as the first experience.** Folded into SH-006 (R1 umbrella). Deliberately covered by SH-009's `.shepherd.yml` + "first-run comment-only" default. Will migrate to shipped CAP `onboarding.dry-run-first`.
+- **Zero-config defaults.** Folded into SH-006 (R1 umbrella) via SH-009's `.shepherd.yml` schema v1.
+- **Built-in gateway with network lockdown.** Folded into SH-006 (R1 umbrella) as **SH-008**.
