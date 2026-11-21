@@ -102,6 +102,22 @@ bad_gh=$(grep -nE 'gh pr (view|merge)' templates/dependabot-automerge.yml \
 if [ -z "$bad_gh" ]; then pass=$((pass + 1))
 else fail=$((fail + 1)); echo "FAIL gh pr view/merge without -R:"; echo "$bad_gh"; fi
 
+# The jq regex embedded in the workflow must be a valid jq regex. We can't
+# execute the full workflow here, but we can lift the LOCK_RE line and test
+# it against a fixture to catch jq escape-parsing bugs at build time.
+if command -v jq >/dev/null 2>&1; then
+  lock_re=$(grep -E "^[[:space:]]*LOCK_RE=" templates/dependabot-automerge.yml \
+    | head -1 | sed -E "s/^[[:space:]]*LOCK_RE=//; s/^'//; s/'$//")
+  if [ -n "$lock_re" ] && \
+     printf '{"files":[{"path":"package-lock.json","additions":1,"deletions":1},{"path":"pyproject.toml","additions":1,"deletions":1}]}' \
+     | jq --argjson _ 0 "[.files[] | select(.path | test(\"$lock_re\") | not) | (.additions + .deletions)] | add // 0" \
+     >/dev/null 2>&1; then
+    pass=$((pass + 1))
+  else
+    fail=$((fail + 1)); echo "FAIL LOCK_RE is not a valid jq regex: $lock_re"
+  fi
+fi
+
 # Release-date lookup: npm + pip + github_actions covered.
 assert_contains templates/dependabot-automerge.yml "registry.npmjs.org"
 assert_contains templates/dependabot-automerge.yml "pypi.org"

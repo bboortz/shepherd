@@ -8,6 +8,15 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+## [v0.3.3] — 2026-11-21 — SH-011 bugfix: jq regex escape
+
+### Fixed
+
+- `templates/dependabot-automerge.yml` LOCK_RE used `\.` inside a jq `test()` string. jq string literals reject `\.` as an invalid escape, so the diff-size gate crashed before any decision. Fixed by using `\\.` so jq sees a backslash-plus-dot and passes a literal `.` to its regex engine.
+- Test now runs the LOCK_RE against a fixture via `jq` to catch escape-parsing regressions at build time (SH-011: 26/0).
+
+Same propagation as v0.3.2: must re-copy `templates/dependabot-automerge.yml` into each auto-merge-opted-in managed repo.
+
 ## [v0.3.2] — 2026-11-21 — SH-011 bugfix: `gh pr view/merge` needs `-R`
 
 ### Fixed
