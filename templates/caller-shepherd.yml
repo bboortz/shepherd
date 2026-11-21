@@ -12,5 +12,7 @@ permissions:
 jobs:
   agent:
     uses: bboortz/shepherd/.github/workflows/reusable-shepherd.yml@main
+    # with:
+    #   base_branch: dev   # override to target a non-default integration branch
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

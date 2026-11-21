@@ -18,6 +18,12 @@ name: reusable-shepherd
 
 "on":
   workflow_call:
+    inputs:
+      base_branch:
+        description: "Base branch for the agent's PRs. Defaults to `main`; override to `dev` or any integration branch that fronts your release line."
+        required: false
+        type: string
+        default: main
     secrets:
       ANTHROPIC_API_KEY:
         description: "Anthropic API key for the sandboxed agent step."
@@ -33,7 +39,7 @@ jobs:
     env:
       FINDINGS_PATH: /tmp/findings.json
       DIFF_PATH: /tmp/diff.patch
-      BASE_BRANCH: main
+      BASE_BRANCH: ${{ inputs.base_branch }}
     steps:
       # 1. Caller's repo at the default workspace (so scripts see package.json,
       #    .shepherd.yml, lockfiles relative to $PWD).

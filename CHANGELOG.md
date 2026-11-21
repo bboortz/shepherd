@@ -8,6 +8,22 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story.
 
+## [v0.7.1-rc1] — 2026-11-21 — configurable base branch for integration-branch repos
+
+### Added
+
+- `.github/workflows/reusable-shepherd.yml` gains an optional `inputs.base_branch` (default `main`). Managed repos whose integration pattern is `dev → main` (like `bb-claw/homelab`) pass `base_branch: dev` from their caller; shepherd-agent PRs are then opened against `dev` instead of the default branch.
+- `templates/caller-shepherd.yml` shows the new knob as a commented example under `jobs.agent`.
+- `templates/dependabot.yml` adds a commented `target-branch:` example — operators can set it per `updates:` entry to route Dependabot PRs at a non-default branch. Native Dependabot feature; we're just surfacing it in the template.
+
+### Why
+
+Surfaced during the SH-010 live-test rollout: `bb-claw/homelab` uses `dev` as its integration branch (Dependabot already targets it). Shepherd's caller workflow was hard-coding `main` as the agent PR base, which would open PRs against the wrong branch on `dev`-integration repos. Both templates now surface the knob; the `reusable-shepherd.yml` input makes it a workflow-level setting rather than a fork-and-patch.
+
+### Not breaking
+
+Existing callers that don't pass `base_branch` keep targeting `main` (default). Managed repos already on `main`-only integration (healthy, beaconry, HRC, kernel-test, forge) see no behaviour change.
+
 ## [v0.7.0-rc1] — 2026-11-21 — SH-010 R1-D: waiting-period on the agent flow
 
 **R1 is feature-complete for the gate stack. All five §12 auto-merge gates are now active on the agent flow.**
