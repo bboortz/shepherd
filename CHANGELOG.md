@@ -8,6 +8,25 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: SH-008 (sandbox perimeter), SH-009 (auto-merge gates), SH-010 (waiting-period) complete R1. See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+## [v0.5.0-rc2] — 2026-11-21 — SH-007 Trivy scan widened
+
+**Bug surfaced on `bboortz/homelab` cross-check:** Trivy was only picking up files named exactly `requirements.txt`, skipping `requirements-dev.txt` / `requirements-ui-test.txt` / etc. by name — a silent blind spot for any Python repo that splits dev / test / ui requirements into separate files. Fixed by adding `--file-patterns` to the Trivy invocation in the reusable workflow.
+
+### Changed
+
+- `.github/workflows/reusable-shepherd.yml` Trivy step now passes:
+  - `--file-patterns 'pip:requirements.*\.txt$'` — additive to the built-in pip detector. Now scans `requirements-dev.txt`, `requirements-ui-test.txt`, etc. All other ecosystems (npm, Cargo, go.mod, Dockerfile, …) keep their built-in patterns — they are **not** replaced.
+  - `--include-deprecated-checks` — widens coverage to historical / deprecated vuln + misconfig rule entries.
+- `test/acceptance/test_SH_007_reusable.sh` extended to assert both flags are present (now 22/0).
+
+### Known remaining gap
+
+Trivy's pip analyzer still drops `requirements.txt` files that use only loose version constraints (`package>=X.Y`, wildcards like `==21.*`) because there's no concrete version to look up. Fix is **source-side** — use `pip-compile` (`pip-tools`) to generate fully-pinned lockfiles from `.in` files. Parked as an IDEAS entry: "pip-compile-or-fail enforcement" (R2 territory — treat loose-pin files as a needs-human issue because shepherd can't gate what it can't scan).
+
+### Zig coverage gap (unchanged, noted)
+
+Trivy has no Zig analyzer today. `bboortz/shepherd` and `bboortz/healthy` have no vuln-scan coverage for Zig deps. Mitigation: Zig deps on the fleet are few and `build.zig.zon`-hashed. Tracked as an IDEAS entry for R2+ consideration.
+
 ## [v0.5.0-rc1] — 2026-11-21 — SH-007 R1-A: reusable shepherd Action
 
 **R1-A ships: shepherd as a reusable workflow.** Managed repos drop in a thin caller + `.shepherd.yml` + one secret. Scripts no longer live in each pilot.
