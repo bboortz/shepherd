@@ -1,0 +1,38 @@
+---
+name: bump
+
+"on":
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Install Zig 0.17.1
+        run: |
+          mkdir -p "$HOME/.zig"
+          curl -sSL https://ziglang.org/download/0.17.1/zig-x86_64-linux-0.17.1.tar.xz \
+            | tar -xJ -C "$HOME/.zig" --strip-components=1
+          "$HOME/.zig/zig" version
+
+      - name: Build shepherd-bump
+        run: "$HOME/.zig/zig" build --prefix .
+
+      - name: Discover pinned actions (shepherd-bump --list)
+        run: ./bin/shepherd-bump --list --root .
+
+      # Scaffold per DESIGN §7 / SH-001. Implemented in a follow-up:
+      #   - name: Resolve latest commit SHA within current major (--check)
+      #   - name: Open PRs for bumpable deps (--pr)
+      # Secret needed: SHEPHERD_BUMP_TOKEN (fine-grained PAT, contents+pull-requests+issues write)

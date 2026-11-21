@@ -243,3 +243,8 @@ Thumbs.db
 # Shepherd runtime caches (reserved for the Action)
 .shepherd-cache/
 .shepherd-work/
+
+# Zig build outputs (bump.zig → bin/shepherd-bump)
+.zig-cache/
+zig-out/
+bin/
