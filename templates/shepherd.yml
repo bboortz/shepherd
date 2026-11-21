@@ -1,12 +1,42 @@
 ---
-version: 1
-risk: low            # low | medium | high
+# Shepherd managed-repo config — schema v1 (SH-009).
+# Required in every managed repo (SH-007). The reusable Action verifies
+# presence; this file carries per-repo overrides for the §12 trust-boundary
+# defaults.
+schema_version: 1
+version: 1              # legacy alias for schema_version — do not remove until R2.
+
+risk: low               # low | medium | high
 build: make build
 test: make test
+
+# Auto-merge policy for shepherd-agent-produced PRs. SH-009 gates are evaluated
+# against these before merging.
 auto_merge:
   patch: true
   minor: true
   major: false
+
+# SH-009 gate configuration.
+#   monitored_pipelines: list of required-check names that gate.pipelines-green
+#     waits on. "all" (default) = every required branch-protection check.
+#   max_diff_lines: cap for gate.diff-size (non-lockfile only — lockfile paths
+#     are exempt, see validate.sh LOCKFILE_RE).
+#   rescan_scope: severity scope for gate.scan-not-worse (part 2).
+#   dry_run: when true, the agent produces a diff + comment on the PR but
+#     does NOT open a merging PR. Default false — flips to true automatically
+#     on a repo's first-ever run (onboarding.dry-run-first, part 2).
+gates:
+  monitored_pipelines: all
+  max_diff_lines: 50
+  rescan_scope: high_critical   # high_critical | all
+
+dry_run: false
+
+# Needs-human escalation. Issues opened on gate failure; dedupe by
+# (package, cve, gate) hash. Part 2.
+needs_human_label: needs-human
+
 security_fix: pr-only  # pr-only | auto-merge-low-risk
 notify: ntfy
 owner: benni

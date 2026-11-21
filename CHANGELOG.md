@@ -6,7 +6,46 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-008 (sandbox perimeter), SH-009 (auto-merge gates), SH-010 (waiting-period) complete R1. See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+Next: SH-009 **part 2** (scan-not-worse + needs-human + dry-run + beaconry/HRC rollout + live canary) + SH-008 (sandbox perimeter) + SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+
+## [v0.6.0-rc1] — 2026-11-21 — SH-009 part 1: auto-merge gates + schema v1
+
+**R1-C part 1 ships: three of four §12 gates + `.shepherd.yml` schema v1.** The missing fourth gate (`scan-not-worse`) + needs-human issue dedupe + dry-run + full fleet rollout + live auto-merge canary ship as **SH-009 part 2** in a follow-up PR.
+
+### Added
+
+- `.github/workflows/reusable-shepherd-gates.yml` — reusable workflow (`on: workflow_call`) evaluating:
+  - `gate.diff-size` — non-lockfile line count ≤ `gates.max_diff_lines` (default 50).
+  - `gate.pipelines-green` — every monitored required-check must be `SUCCESS` / `NEUTRAL` / `SKIPPED`. Default `monitored_pipelines: all`; explicit allowlist supported.
+  - `gate.security-fix-removes-finding` (**partial — label-trust**; strict check in part 2).
+  - Enables `gh pr merge --auto --merge` when all pass + `.shepherd.yml` opts into the semver level. Falls back to "leave open" with `::notice::` reason.
+- `templates/caller-shepherd-gates.yml` — 23-line drop-in for managed repos. Triggers on `pull_request` (label-filtered) + `workflow_run` (re-fires on CI completion).
+- `scripts/shepherd-poc/gate-diff-size.sh` — standalone non-lockfile line counter. Sole owner of `LOCKFILE_RE`; used by both `validate.sh` (R0 path) and the gates workflow (SH-009 path).
+- `test/acceptance/test_SH_009_gates.sh` — 31 assertions covering schema, workflow shape, caller template, label logic, counter behaviour, size-cap regression.
+- `docs/stories/SH-009-auto-merge-gates.md` + `docs/plan/SH-009-auto-merge-gates-plan.md`.
+
+### Changed
+
+- `templates/shepherd.yml` — schema v1: `schema_version: 1`, new `gates.{monitored_pipelines, max_diff_lines, rescan_scope}`, `dry_run`, `needs_human_label`. Existing `auto_merge.{patch,minor,major}` kept; now formally part of schema v1.
+- `scripts/shepherd-poc/validate.sh` — refactored to delegate line counting to `gate-diff-size.sh`. **R0 contract unchanged** — exit codes 0/2/3 identical, byte-for-byte compatible stderr.
+- `scripts/shepherd-poc/open-pr.sh` — always applies `shepherd-agent` label; applies `shepherd-security-fix` label when `FINDINGS_PATH` contains at least one HIGH/CRITICAL vuln. Auto-creates labels if missing; tolerates failure.
+- 5 CAPs flipped `design → active` in `docs/CAPABILITIES.md`:
+  - `gate.pipelines-green`
+  - `gate.security-fix-removes-finding` (partial — label-trust)
+  - `auto-merge.opt-in-per-repo`
+  - `auto-merge.risk.low` / `.medium` / `.high`
+- 1 new CAP: `config.schema-v1`.
+
+### Deferred to SH-009 part 2
+
+- `gate.scan-not-worse` — Trivy base-vs-PR diff.
+- `escalation.needs-human-issue` + `escalation.dedupe` — auto-opened issue per gate failure.
+- `onboarding.dry-run-first` — `.shepherd.yml → dry_run: true` → comment-only PR path.
+- Beaconry + HRC caller rollout; live auto-merge canary on HRC.
+
+### Not breaking
+
+Strictly additive. Managed repos with the pre-SH-009 `.shepherd.yml` continue to work unchanged — the new `gates`/`dry_run`/`needs_human_label` fields are all optional with sensible defaults.
 
 ## [v0.5.0-rc2] — 2026-11-21 — SH-007 Trivy scan widened
 
