@@ -6,7 +6,46 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-008 (sandbox perimeter), SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story.
+
+## [v0.7.0-rc1] — 2026-11-21 — SH-010 R1-D: waiting-period on the agent flow
+
+**R1 is feature-complete for the gate stack. All five §12 auto-merge gates are now active on the agent flow.**
+
+### Added
+
+- `scripts/shepherd-poc/age-of-release.sh` — shared helper (used by both the agent flow and the Dependabot flow going forward). Takes `<ecosystem> <package> <version>`; emits ISO-8601 release timestamp. Ecosystems: `npm`, `pip`, `gh-actions`, `gomod`. Exit codes: `0` ok, `2` not-found (hard-fail), `3` unknown-ecosystem (fail-open signal), `4` usage.
+- `scripts/shepherd-poc/agent-call.sh` extended to require an `<intent>...</intent>` block in the model response. Extracts to `$INTENT_PATH` (default `/tmp/intent.json`). The diff on `$DIFF_PATH` no longer contains the intent block.
+- `scripts/shepherd-poc/open-pr.sh` commits `.shepherd-intent.json` alongside the diff when `$INTENT_PATH` is non-empty. Logs a warning when it's missing (gates workflow will hard-fail on the resulting PR).
+- `scripts/shepherd-poc/validate.sh` — `.shepherd-intent.json` added to `PROTECTED_RE`: agent-produced diffs cannot touch the intent file.
+- `.github/workflows/reusable-shepherd-gates.yml` — new `gate.waiting-period` step after `scan-not-worse`. Reads `head/.shepherd-intent.json`, calls `age-of-release.sh`, compares to `gates.waiting_period_hours`. Hard-fails on missing/malformed intent; fail-opens on unknown ecosystem.
+- `templates/shepherd.yml` — schema v1 field `gates.waiting_period_hours: 24` (0 disables).
+- `test/acceptance/test_SH_010_waiting.sh` — 18 assertions covering age-of-release shape (usage, unknown-ecosystem, live-registry), schema field, workflow references, prompt wiring, intent-file protection.
+
+### CAP flipped
+
+- `gate.waiting-period` → **active** (full coverage; was `active (partial)` with only Dependabot flow).
+- `onboarding.structured-intent` → **new, active**. The agent's structured output is a load-bearing piece of the trust model from here on.
+
+### All five §12 auto-merge gates are now active on the agent flow
+
+With SH-010, the auto-merge path is complete per DESIGN §12:
+
+- `gate.diff-size`
+- `gate.pipelines-green`
+- `gate.scan-not-worse`
+- `gate.security-fix-removes-finding`
+- `gate.waiting-period`
+
+### Breaking
+
+- Shepherd-agent PRs **must** carry `.shepherd-intent.json`. All three pilots use the central `scripts/shepherd-poc/agent-call.sh`, so the rollout is centralised; existing agent runs will fail `gate.waiting-period` with a hard-fail needs-human issue until the agent flow is re-run against this version of `agent-call.sh`.
+
+### Pending (R1 close-out)
+
+- SH-008 (sandbox perimeter) — the last remaining R1 sub-story.
+- Beaconry + HRC caller re-pin to v0.7.0-rc1 (healthy will go first).
+- Live canary scenario per gate outcome.
 
 ## [v0.6.0-rc6] — 2026-11-21 — SH-009 part 2 bugfix: contents:write for immediate-merge path
 

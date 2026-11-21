@@ -70,6 +70,21 @@ case "$mode" in
   recount)        git apply --recount         "$DIFF" ;;
   recount+3way)   git apply --recount --3way  "$DIFF" ;;
 esac
+
+# SH-010: commit the structured intent (ecosystem/package/from/to) alongside
+# the diff. agent-call.sh emits $INTENT_PATH (default /tmp/intent.json). The
+# gates workflow reads .shepherd-intent.json on the PR head to run the
+# waiting-period gate. If the intent is missing, the gates workflow will
+# hard-fail and open a needs-human — we still open the PR so the operator
+# has a trace.
+INTENT_PATH="${INTENT_PATH:-/tmp/intent.json}"
+if [ -s "$INTENT_PATH" ]; then
+  cp "$INTENT_PATH" .shepherd-intent.json
+  echo "→ Intent file committed alongside diff"
+else
+  echo "::warning::no \$INTENT_PATH / empty intent — gates.waiting-period will hard-fail on this PR"
+fi
+
 git add -A
 git commit -m "shepherd-poc: automated dependency fix ($timestamp)"
 git push -u origin "$branch"

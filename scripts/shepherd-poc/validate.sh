@@ -29,7 +29,7 @@ MAX_LINES="${MAX_LINES:-50}"
 # its own rules. Keep the list narrow and document additions in CHANGELOG.
 # scripts/shepherd-poc/* added by SH-005: these ARE the enforcement scripts;
 # if the agent can touch them, it can disable the blocklist.
-PROTECTED_RE='^(\.github/workflows/.*|\.shepherd\.yml|scripts/(release\.sh|shepherd-poc/.*)|VERSION|.*\.env|.*\.pem|.*\.key)$'
+PROTECTED_RE='^(\.github/workflows/.*|\.shepherd\.yml|\.shepherd-intent\.json|scripts/(release\.sh|shepherd-poc/.*)|VERSION|.*\.env|.*\.pem|.*\.key)$'
 
 # ---- Scan file headers --------------------------------------------------
 # Unified-diff file lines look like:
