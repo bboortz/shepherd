@@ -96,8 +96,9 @@ assert_contains templates/dependabot-automerge.yml "patch"
 assert_contains templates/dependabot-automerge.yml "minor"
 
 # Every `gh pr view` / `gh pr merge` must pass -R; the workflow has no
-# git checkout, so gh needs the repo explicit.
+# git checkout, so gh needs the repo explicit. Skip comment lines.
 bad_gh=$(grep -nE 'gh pr (view|merge)' templates/dependabot-automerge.yml \
+  | grep -vE '^[0-9]+:[[:space:]]*#' \
   | grep -v -- '-R ' || true)
 if [ -z "$bad_gh" ]; then pass=$((pass + 1))
 else fail=$((fail + 1)); echo "FAIL gh pr view/merge without -R:"; echo "$bad_gh"; fi

@@ -8,6 +8,17 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R1 scope (reusable Action in this repo, sandbox perimeter, auto-merge gates, waiting period). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
 
+## [v0.3.4] — 2026-11-21 — SH-011 bugfix: graceful fallback when branch protection missing
+
+### Fixed
+
+- `templates/dependabot-automerge.yml` crashed with `GraphQL: Pull request Protected branch rules not configured for this branch (enablePullRequestAutoMerge)` when the base branch had no protection rule. `gh pr merge --auto` requires at least one protection rule to wait on. Now captures the failure, emits a `decision()` log line naming the missing setup, and exits 0 so the step doesn't flap red on every Dependabot PR.
+- Test regex tightened: `gh pr view/merge without -R` check now ignores comment lines.
+
+### Operational note
+
+Repos opting into `auto_merge: true` must additionally have minimal branch protection on their base branch (one required status check is enough — e.g. `Detect changes`). Without it, the workflow falls through to "leaves PR open" instead of actually merging. This is a one-time repo setup, done via `gh api -X PUT repos/<repo>/branches/main/protection` or the GitHub UI.
+
 ## [v0.3.3] — 2026-11-21 — SH-011 bugfix: jq regex escape
 
 ### Fixed
