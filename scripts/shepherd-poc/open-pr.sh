@@ -18,6 +18,22 @@ fi
 DIFF=$1
 command -v gh >/dev/null || { echo "gh CLI missing" >&2; exit 3; }
 
+# --- SH-009 part-2: dry-run mode ---------------------------------------
+# .shepherd.yml → dry_run: true means produce no PR; just summarise.
+# Operators flip this on for a new repo's first-ever cycle to validate the
+# pipeline without risking a half-baked auto-merge. Closes
+# onboarding.dry-run-first.
+if [ -f .shepherd.yml ]; then
+  dry_run=$(grep -E '^[[:space:]]*dry_run:' .shepherd.yml | head -1 | grep -Eo '(true|false)' || echo false)
+  if [ "$dry_run" = "true" ]; then
+    diff_lines=$(wc -l < "$DIFF")
+    echo "::notice title=shepherd dry-run::dry_run=true — would have opened a PR with $diff_lines lines of diff. Set dry_run: false in .shepherd.yml to go live."
+    echo "→ dry-run: no PR opened. Diff preview:"
+    head -40 "$DIFF" | sed 's/^/    /'
+    exit 0
+  fi
+fi
+
 # LLMs regularly emit unified diffs with slightly-wrong hunk line counts
 # (the N,M in `@@ -N,M +N,M @@`). `--recount` makes git recompute those from
 # the actual line content, which handles the most common failure mode. `--3way`

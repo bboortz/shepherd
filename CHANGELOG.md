@@ -6,7 +6,47 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-009 **part 2** (scan-not-worse + needs-human + dry-run + workflow_run re-fire + beaconry/HRC rollout + live canary) + SH-008 (sandbox perimeter) + SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+Next: beaconry + HRC gates rollout + live auto-merge canary (SH-009 close-out), SH-008 (sandbox perimeter), SH-010 (waiting-period on agent flow). See [`docs/DESIGN.md §13`](docs/DESIGN.md).
+
+## [v0.6.0-rc3] — 2026-11-21 — SH-009 part 2: scan-not-worse + needs-human + dry-run + workflow_run
+
+**R1-C complete**. All four §12 gates active; needs-human escalation on failure; dry-run mode for onboarding; workflow_run re-fires gates when PR CI finishes.
+
+### Added
+
+- `scripts/shepherd-poc/scan-not-worse.sh` — diffs two Trivy JSONs by `(PkgName, VulnerabilityID)`. Emits `{added, removed, unchanged, added_ids, removed_ids}` JSON; exit 0 if `added == 0`, 2 otherwise. Severity scope driven by `.shepherd.yml` `gates.rescan_scope` (`high_critical` default, `all` widenable).
+- `scripts/shepherd-poc/open-needs-human.sh` — opens a needs-human issue on the caller repo per failed gate, or comments on the existing one. Dedupe by title `[shepherd] gate <GATE> on PR #<N>`.
+- `.github/workflows/reusable-shepherd-gates.yml` restructured for part 2:
+  - Checks out PR head **and** base at the SHAs reported by `gh pr view`.
+  - Installs Trivy, scans both, feeds JSONs to `scan-not-worse.sh`.
+  - **Strict `gate.security-fix-removes-finding`**: when `shepherd-security-fix` label is present, requires `scan-not-worse.sh.removed ≥ 1`.
+  - `escalate()` helper calls `open-needs-human.sh` on any gate failure before emitting the `::notice::` decision.
+  - `pipelines-green` now splits PENDING (defer) from FAILURE/ERROR (escalate) — the gate no longer fires needs-human on in-progress checks.
+  - `permissions` tightened: `contents: read, pull-requests: write, issues: write`.
+- `templates/caller-shepherd-gates.yml` adds `workflow_run` trigger + a `resolve-pr` prep job that looks up the PR number by HEAD SHA (`gh pr list --search sha:<sha>`), bails cleanly when no PR found.
+- `scripts/shepherd-poc/open-pr.sh` — `.shepherd.yml` `dry_run: true` short-circuits PR opening, emits a `::notice::` summary.
+- `test/acceptance/test_SH_009_gates.sh` extended to 44 assertions (added: scan-not-worse 3-fixture semantics, needs-human script shape, dry-run wiring, part-2 workflow references).
+
+### CAPs flipped `design → active`
+
+- `gate.scan-not-worse`
+- `gate.security-fix-removes-finding` (upgraded from part-1 label-trust)
+- `escalation.needs-human-issue`
+- `escalation.dedupe`
+- `onboarding.dry-run-first`
+
+### All four §12 auto-merge gates are now active
+
+With part 2, the auto-merge path is complete for the agent flow:
+- `gate.diff-size` (from SH-004/009-part-1)
+- `gate.pipelines-green` (SH-009 part 1)
+- `gate.scan-not-worse` (SH-009 part 2 — closes the gap SH-011 documented)
+- `gate.security-fix-removes-finding` (SH-009 part 2, strict)
+
+### Pending (next ship)
+
+- Beaconry + HRC caller rollout (copy gates workflow in, SHA-pin).
+- Live auto-merge canary on HRC — one real shepherd-agent PR through the full gate stack.
 
 ## [v0.6.0-rc2] — 2026-11-21 — SH-009 part 1 bugfix: drop workflow_run trigger
 

@@ -52,8 +52,10 @@ assert_contains "$TEMPL" "gates:"
 GATES=.github/workflows/reusable-shepherd-gates.yml
 assert_exists "$GATES"
 assert_contains "$GATES" "workflow_call"
-assert_contains "$GATES" "contents: write"
+# Part 2: gates only read contents; the PR merge call uses pull-requests:write.
+# Part 2 also writes issues (needs-human).
 assert_contains "$GATES" "pull-requests: write"
+assert_contains "$GATES" "issues: write"
 assert_contains "$GATES" "gate.diff-size"
 assert_contains "$GATES" "gate.pipelines-green"
 assert_contains "$GATES" "gate.security-fix-removes-finding"
@@ -87,12 +89,64 @@ else fail=$((fail + 1)); echo "FAIL gates uses: $bad_uses"; fi
 CALLER=templates/caller-shepherd-gates.yml
 assert_exists "$CALLER"
 n=$(wc -l < "$CALLER" | tr -d ' ')
-if [ "$n" -le 25 ]; then pass=$((pass + 1))
-else fail=$((fail + 1)); echo "FAIL caller-shepherd-gates.yml is $n lines, cap is 25"; fi
+# Part 1 target was 25; part 2 adds workflow_run + SHA-based PR resolution,
+# which inflates to ~55. Keep a cap so we notice if it grows further.
+if [ "$n" -le 60 ]; then pass=$((pass + 1))
+else fail=$((fail + 1)); echo "FAIL caller-shepherd-gates.yml is $n lines, cap is 60"; fi
 assert_contains "$CALLER" "bboortz/shepherd/.github/workflows/reusable-shepherd-gates.yml"
 assert_contains "$CALLER" "shepherd-agent"
 assert_contains "$CALLER" "pull_request"
+assert_contains "$CALLER" "workflow_run"
 assert_not_contains "$CALLER" "secrets: inherit"
+
+# Part 2: reusable workflow must reference scan-not-worse + needs-human.
+GATES=.github/workflows/reusable-shepherd-gates.yml
+assert_contains "$GATES" "scan-not-worse.sh"
+assert_contains "$GATES" "open-needs-human.sh"
+assert_contains "$GATES" "gate.scan-not-worse"
+# Dry-run plumbing in open-pr.sh
+assert_contains scripts/shepherd-poc/open-pr.sh "dry_run"
+# scan-not-worse.sh exists + executable
+assert_exists scripts/shepherd-poc/scan-not-worse.sh
+if [ -x scripts/shepherd-poc/scan-not-worse.sh ]; then pass=$((pass + 1))
+else fail=$((fail + 1)); echo "FAIL scan-not-worse.sh not executable"; fi
+# open-needs-human.sh exists + executable
+assert_exists scripts/shepherd-poc/open-needs-human.sh
+if [ -x scripts/shepherd-poc/open-needs-human.sh ]; then pass=$((pass + 1))
+else fail=$((fail + 1)); echo "FAIL open-needs-human.sh not executable"; fi
+
+# scan-not-worse behaviour
+tmp=$(mktemp -d)
+cat > "$tmp/base.json" <<'EOF'
+{"Results":[{"Vulnerabilities":[
+  {"PkgName":"ws","VulnerabilityID":"CVE-2026-1","Severity":"HIGH"},
+  {"PkgName":"form-data","VulnerabilityID":"CVE-2025-7783","Severity":"CRITICAL"}
+]}]}
+EOF
+cat > "$tmp/head-fixed.json" <<'EOF'
+{"Results":[{"Vulnerabilities":[
+  {"PkgName":"ws","VulnerabilityID":"CVE-2026-1","Severity":"HIGH"}
+]}]}
+EOF
+cat > "$tmp/head-worse.json" <<'EOF'
+{"Results":[{"Vulnerabilities":[
+  {"PkgName":"ws","VulnerabilityID":"CVE-2026-1","Severity":"HIGH"},
+  {"PkgName":"form-data","VulnerabilityID":"CVE-2025-7783","Severity":"CRITICAL"},
+  {"PkgName":"new","VulnerabilityID":"CVE-2027-999","Severity":"HIGH"}
+]}]}
+EOF
+# base vs fixed → 0 added → exit 0
+assert_rc 0 scripts/shepherd-poc/scan-not-worse.sh "$tmp/base.json" "$tmp/head-fixed.json"
+# base vs worse → 1 added → exit 2
+assert_rc 2 scripts/shepherd-poc/scan-not-worse.sh "$tmp/base.json" "$tmp/head-worse.json"
+# base vs base → 0 added → exit 0
+assert_rc 0 scripts/shepherd-poc/scan-not-worse.sh "$tmp/base.json" "$tmp/base.json"
+# Removed count on fix: expect 1
+rc=0; out=$(scripts/shepherd-poc/scan-not-worse.sh "$tmp/base.json" "$tmp/head-fixed.json") || rc=$?
+removed=$(echo "$out" | jq -r .removed)
+if [ "$removed" = "1" ]; then pass=$((pass + 1))
+else fail=$((fail + 1)); echo "FAIL scan-not-worse.removed want=1 got=$removed"; fi
+rm -rf "$tmp"
 
 # ----- Scenario 4 — open-pr.sh applies shepherd-agent label ----------------
 OPEN=scripts/shepherd-poc/open-pr.sh
