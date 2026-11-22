@@ -2,7 +2,7 @@
 # test_SH_012_docs_layout.sh — docs/ layout + reference integrity
 # Story:  docs/stories/SH-012-docs-layout-reshape.md
 # Plan:   docs/plan/SH-012-docs-layout-reshape-plan.md
-# Covers: docs.layout.three-dirs,
+# CAPs: docs.layout.three-dirs,
 #         docs.specs.authoritative-contracts,
 #         docs.references.stable
 

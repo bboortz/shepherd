@@ -2,7 +2,7 @@
 # test_SH_001_retire_renovate.sh — retire Renovate; add shepherd-bump for GH Actions
 # Story:  docs/stories/SH-001-retire-renovate.md
 # Plan:   docs/plan/SH-001-retire-renovate-plan.md
-# Covers: supply-chain.no-third-party-actions-critical-path,
+# CAPs: supply-chain.no-third-party-actions-critical-path,
 #         supply-chain.first-party-bump-engine,
 #         supply-chain.sha-pin-all-actions,
 #         bump.gh-actions

@@ -2,7 +2,7 @@
 # test_SH_009_gates.sh — R1-C: auto-merge gates + schema v1 (part 1).
 # Story:  docs/stories/SH-009-auto-merge-gates.md
 # Plan:   docs/plan/SH-009-auto-merge-gates-plan.md
-# Covers (part 1): gate.pipelines-green,
+# CAPs (part 1): gate.pipelines-green,
 #                  gate.diff-size (extension to PR re-run),
 #                  gate.security-fix-removes-finding (partial — label-trust),
 #                  auto-merge.opt-in-per-repo,

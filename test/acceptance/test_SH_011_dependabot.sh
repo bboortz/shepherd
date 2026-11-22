@@ -2,7 +2,7 @@
 # test_SH_011_dependabot.sh — Dependabot baseline: enforce + opt-in gated auto-merge
 # Story:  docs/stories/SH-011-dependabot-enforce-automerge.md
 # Plan:   docs/plan/SH-011-dependabot-enforce-automerge-plan.md
-# Covers: dependabot.presence-verified,
+# CAPs: dependabot.presence-verified,
 #         dependabot.config-enforce-opt-in,
 #         dependabot.auto-merge-opt-in-per-repo,
 #         dependabot.auto-merge-level-patch-minor,

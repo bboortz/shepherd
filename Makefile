@@ -17,8 +17,8 @@ ACCEPTANCE_TESTS := $(wildcard test/acceptance/test_SH_*.sh)
 BUMP := bin/shepherd-bump
 
 .PHONY: help build test test-acceptance injection-drill check yaml-lint md-lint verify-memory-size \
-        verify-traceability verify-version-bumped verify-changelog \
-        install-hooks clean
+        verify-traceability verify-docs-layout verify-caps-traceability \
+        verify-version-bumped verify-changelog install-hooks clean
 
 help:
 	@echo "shepherd targets:"
@@ -32,7 +32,7 @@ help:
 	@echo "  verify-memory-size  memory/*.md and CLAUDE.md each ≤ $(MEMORY_LINE_LIMIT) lines"
 	@echo "  clean               remove .zig-cache/ and bin/"
 	@echo ""
-	@echo "  verify-traceability docs/ layout + reference integrity (SH-012)"
+	@echo "  verify-traceability docs/ layout (SH-012) + CAPs↔test↔story links (SH-013)"
 	@echo ""
 	@echo "Stubs (grow in follow-up stories):"
 	@echo "  verify-version-bumped  VERSION differs from origin/main:VERSION"
@@ -82,8 +82,13 @@ verify-memory-size:
 	done; \
 	exit $$fail
 
-verify-traceability:
+verify-traceability: verify-docs-layout verify-caps-traceability
+
+verify-docs-layout:
 	@test/acceptance/test_SH_012_docs_layout.sh
+
+verify-caps-traceability:
+	@scripts/verify-traceability.sh
 
 verify-version-bumped:
 	@echo "verify-version-bumped: stub — lands in a follow-up SH story"

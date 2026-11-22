@@ -2,7 +2,7 @@
 # test_SH_007_reusable.sh — R1-A: reusable shepherd Action (required .shepherd.yml)
 # Story:  docs/stories/SH-007-reusable-action.md
 # Plan:   docs/plan/SH-007-reusable-action-plan.md
-# Covers: r1.reusable-action,
+# CAPs: r1.reusable-action,
 #         onboarding.one-workflow,
 #         onboarding.default-github-token,
 #         config.required-per-repo
