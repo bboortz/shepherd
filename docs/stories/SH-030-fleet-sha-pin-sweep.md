@@ -1,7 +1,7 @@
 ---
 id: SH-030
 slug: fleet-sha-pin-sweep
-status: in-progress
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

@@ -3,7 +3,7 @@ id: SH-030
 slug: fleet-sha-pin-sweep
 story: docs/stories/SH-030-fleet-sha-pin-sweep.md
 branch: feat/SH-030-verify-sha-pin
-status: in-progress
+status: shipped
 ---
 
 # SH-030 plan — Fleet SHA-pin sweep + `shepherd-bump --verify-sha-pin`
