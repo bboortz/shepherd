@@ -186,6 +186,49 @@ jobs:
             escalate diff-size "diff exceeds non-lockfile cap" /tmp/sh-009/ctx
           fi
 
+          # --- gate.risk-paths-requires-approval (SH-027) -----------------
+          # Distinct from §12 `blocklist.protected-files`: the blocklist
+          # bars the agent from WRITING a path at all; risk-paths let the
+          # agent write but force a human to approve before auto-merge.
+          # Read .shepherd.yml → risk_paths: [glob, glob, ...] (YAML inline
+          # list or block list). Empty / absent → gate is a no-op.
+          risk_paths_raw=$(awk '
+            /^risk_paths:/ { in_block = 1; next }
+            in_block && /^[a-zA-Z]/ { exit }
+            in_block && /^[[:space:]]+-[[:space:]]+/ {
+              sub(/^[[:space:]]+-[[:space:]]+/, "");
+              gsub(/[[:space:]]*#.*$/, "");
+              gsub(/^"|"$/, "");
+              gsub(/^'"'"'|'"'"'$/, "");
+              print
+            }
+          ' "$cfg" 2>/dev/null || true)
+          if [ -n "$risk_paths_raw" ]; then
+            changed_files=$(gh pr diff "$PR_NUMBER" -R "$REPO" --name-only 2>/dev/null || true)
+            matched=""
+            while IFS= read -r glob; do
+              [ -z "$glob" ] && continue
+              while IFS= read -r f; do
+                [ -z "$f" ] && continue
+                # shellcheck disable=SC2254  # intentional glob expansion
+                case "$f" in $glob) matched="$matched $f:$glob" ;; esac
+              done <<< "$changed_files"
+            done <<< "$risk_paths_raw"
+            if [ -n "$matched" ]; then
+              {
+                echo "risk-paths matched by PR diff:"
+                echo "$matched" | tr ' ' '\n' | grep . | sort -u
+                echo ""
+                echo "configured risk_paths (.shepherd.yml):"
+                echo "$risk_paths_raw" | sed 's/^/  - /'
+              } > /tmp/sh-009/ctx
+              escalate risk-paths-requires-approval "PR touches configured risk_paths — human must approve before auto-merge" /tmp/sh-009/ctx
+            fi
+            echo "gate.risk-paths-requires-approval: ok (no risk_paths glob matched)"
+          else
+            echo "gate.risk-paths-requires-approval: no risk_paths configured — skipping"
+          fi
+
           # --- gate.pipelines-green ---------------------------------------
           gh pr checks "$PR_NUMBER" -R "$REPO" --json name,state --jq '.[] | "\(.name) \(.state)"' > /tmp/sh-009/checks || true
           echo "pipeline status:"
