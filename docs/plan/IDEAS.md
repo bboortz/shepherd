@@ -51,6 +51,7 @@ Discovered during the 2026-11-21 rollout on `bboortz/ham-radio-compass` + `bboor
 - **Grouped Dependabot PR title parsing.** Current title regex is `Bump <name> from X.Y.Z to A.B.C`; grouped PRs ship as `Bump <a> and <b>`. The SH-011 workflow classifies them as `unknown` → no auto-merge. Fix: parse `.github/dependabot.yml` `groups:` config, inspect PR body for per-package version pairs, or walk manifest diff files. Small story.
 - **0.x.y semver treatment.** SH-011 classifier treats `0.14.1 → 0.17.5` as `minor` (digit equality). Under SemVer 2.0 this is potentially breaking. Consider promoting any `0.x.y → 0.y+.z` change to `major` in the gate — matches ecosystem convention (npm, ruff, zig).
 - **Dependabot-recreate-after-config-change nudge.** After a repo first adopts `.github/dependabot.yml`, pre-existing GitHub automated-security PRs are orphaned ("delete the PR so Dependabot can recreate") and Dependabot does not immediately recreate them on close. Need a procedural note in the SH-011 docs or a shepherd helper that re-triggers the security scan.
+- **HRC real test harness (post-R1).** SH-018 onboarded HRC to the dev-cycle contract with `test`/`test-affected` aliased to `build` (tsc + lint). Promote to a story: add Jest + Expo testing-library, write smoke tests for the compass + QSO log, let `test-affected` do a real module→test mapping. Lower priority than R1 soak.
 
 ## Candidates from DESIGN.md §12
 
