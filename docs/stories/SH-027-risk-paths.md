@@ -1,7 +1,7 @@
 ---
 id: SH-027
 slug: risk-paths
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
