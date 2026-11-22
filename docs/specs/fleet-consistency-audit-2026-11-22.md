@@ -1,5 +1,33 @@
 # Fleet consistency audit — 2026-11-22
 
+## Third pass — 2026-11-22 (late evening)
+
+**When:** re-run after SH-035/SH-036/SH-037/SH-038 shipped.
+
+**What changed since the second pass:**
+
+- **SH-035 shipped** — workflow filename convergence on 5 non-HRC repos. Each got `ci.yml` renamed to `ci-branch.yml` and a new `ci-patch.yml` dropped in from `templates/ci-patch.yml`. Forge also renamed `nightly.yml` → `ci-nightly.yml`. Job names preserved so branch-protection rulesets still resolve. PRs: shepherd internal (no change — already native), [healthy #40](https://github.com/bboortz/healthy/pull/40), [beaconry #107](https://github.com/bboortz/beaconry/pull/107), [homelab #268](https://github.com/bb-claw/homelab/pull/268), [kernel-test #117](https://github.com/bb-claw/kernel-test/pull/117), [forge #171](https://github.com/bboortz/forge/pull/171).
+- **SH-036 shipped** ([PR #44](https://github.com/bboortz/shepherd/pull/44)) — shepherd got a real diff-aware `test-affected` via `scripts/test-affected.sh`. Replaced the `test-affected: test-acceptance` identity alias.
+- **SH-037 shipped** ([PR #41](https://github.com/bboortz/healthy/pull/41)) — healthy got the same diff-aware pattern (`scripts/test-affected.sh`).
+- **SH-038 shipped** ([PR #118](https://github.com/bb-claw/kernel-test/pull/118)) — kernel-test got the same diff-aware pattern.
+
+**New totals:** 75 ✅ · 1 ⚠️ · 1 ❌ out of 77 cells (second pass was 67 / 9 / 1). Net shift: +8 ✅ since the second pass. Of the 9 ⚠️ cells from the second pass, 8 flipped to ✅ — 5 column-6 workflow-filename ⚠️s resolved by SH-035, 3 column-11 test-affected ⚠️s resolved by SH-036/SH-037/SH-038.
+
+**Remaining non-green** (both on HRC, both explicitly scoped-out per user direction):
+
+- **HRC column 6** (`ci-release.yml` missing; workflows are `lint.yml` + `release.yml` + `eas-build.yml`) — ❌. Out of scope for SH-035 by user directive: HRC is a React Native / Expo app, the tiered filename story benefits native-repo auditability more than it does HRC's EAS-driven flow.
+- **HRC column 11** (`test-affected: test` identity alias, no module graph) — ⚠️. Contract-permitted per `dev-cycle.contract.tiered-make-targets` (HRC has no module graph yet); same documented posture as the first pass. No story open.
+
+**Follow-up stories open:**
+
+- **SH-031 (orphaned pins)** — still backlog. The SH-030 sweep did not surface any orphaned pins in practice; SH-031 remains parked for when `shepherd-bump` begins opening bump PRs in anger (runtime orphan detection vs sweep-time).
+- **HRC column 6 (`ci-release.yml` missing)** — tracked per user direction as explicitly out of scope. Would be reopened if HRC moves off the EAS flow.
+- **HRC column 11 (`test-affected` identity alias)** — would become shippable once HRC grows a module graph (TypeScript path-aware test selection). No current driver.
+
+The §12 supply-chain invariant stays green across the entire fleet. The DD-TGD pre-push gate stays present on every managed repo. The dev-cycle contract's **mechanical** uniformity (9-target Makefile, dual-branch, `.shepherd.yml`, dependabot) is 100 % intact. The remaining drift is confined to HRC's ecosystem-driven quirks.
+
+---
+
 ## Second pass — 2026-11-22 (evening)
 
 **When:** re-run on 2026-11-22, same day as the first pass, after three follow-up stories shipped.
@@ -47,31 +75,31 @@ Checks (columns):
 
 | Repo | 1 default | 2 branches | 3 Makefile | 4 `.shepherd.yml` | 5 dependabot | 6 ci-tiered | 7 shepherd caller | 8 gates caller | 9 SHA-pin | 10 pre-push | 11 test-affected |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **shepherd** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ✅ ci-branch/patch/release.yml (native) | ✅ reusable-shepherd.yml | ✅ reusable-shepherd-gates.yml | ✅ verifier green | ✅ `.pre-commit-config.yaml` wires `make check` at pre-push (SH-033) | ⚠️ alias → `test-acceptance` (shepherd has no app tier; acceptable) |
-| **healthy** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ⚠️ `ci.yml` + `ci-release.yml` + `release.yml` (aliased via Makefile) | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ pre-commit `make check` pre-push | ⚠️ identity alias → `test` (3-min full run; documented in Makefile) |
-| **beaconry** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ⚠️ `ci.yml` + `ci-release.yml` + `release.yml` | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ pre-commit `make check` pre-push | ✅ diff-aware → `test-updates` |
-| **ham-radio-compass** | ✅ `dev` (flipped via SH-032) | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ❌ only `lint.yml` + `release.yml` + `eas-build.yml` (no `ci-release.yml`; no tiered split) | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ `.husky/pre-push` → `make check` (SH-033) | ⚠️ identity alias → `test` (documented: "HRC has no module graph yet") |
-| **homelab** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete (build = `make lint` — Ansible repo, deliberate) | ✅ present | ⚠️ `ci.yml` + `ci-release.yml` + `cd.yml` + `weekly-checks.yml` | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ `.pre-commit-config.yaml` added (SH-033) | ✅ diff-aware → `test-updates` (changed-roles) |
-| **kernel-test** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete (build = `make programs`; test = `make ci-test` — documented) | ✅ present | ⚠️ `ci.yml` + `ci-release.yml` + `ci-nightly.yml` | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ `.pre-commit-config.yaml` added (SH-033) | ⚠️ alias → `ci-test` (framework tests only, by design — no kernel tree) |
-| **forge** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ⚠️ `ci.yml` + `build.yml` + `release.yml` + `nightly.yml` | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ pre-commit `make check` pre-push | ✅ diff-aware → `scripts/smart-check.sh` |
+| **shepherd** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ✅ ci-branch/patch/release.yml (native) | ✅ reusable-shepherd.yml | ✅ reusable-shepherd-gates.yml | ✅ verifier green | ✅ `.pre-commit-config.yaml` wires `make check` at pre-push (SH-033) | ✅ diff-aware → `scripts/test-affected.sh` (SH-036) |
+| **healthy** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ✅ ci-branch/patch/release.yml (SH-035) + `release.yml` promote-job | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ pre-commit `make check` pre-push | ✅ diff-aware → `scripts/test-affected.sh` (SH-037) |
+| **beaconry** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ✅ ci-branch/patch/release.yml (SH-035) + `release.yml` promote-job | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ pre-commit `make check` pre-push | ✅ diff-aware → `test-updates` |
+| **ham-radio-compass** | ✅ `dev` (flipped via SH-032) | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ❌ only `lint.yml` + `release.yml` + `eas-build.yml` (no `ci-release.yml`; no tiered split — explicitly out of scope for SH-035) | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ `.husky/pre-push` → `make check` (SH-033) | ⚠️ identity alias → `test` (documented: "HRC has no module graph yet") |
+| **homelab** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete (build = `make lint` — Ansible repo, deliberate) | ✅ present | ✅ ci-branch/patch/release.yml (SH-035) + `cd.yml` + `weekly-checks.yml` (deploy + nightly extras) | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ `.pre-commit-config.yaml` added (SH-033) | ✅ diff-aware → `test-updates` (changed-roles) |
+| **kernel-test** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete (build = `make programs`; test = `make ci-test` — documented) | ✅ present | ✅ ci-branch/patch/release/nightly.yml (SH-035) | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ `.pre-commit-config.yaml` added (SH-033) | ✅ diff-aware → `scripts/test-affected.sh` (SH-038) |
+| **forge** | ✅ `dev` | ✅ both | ✅ 9/9 | ✅ v1 complete | ✅ present | ✅ ci-branch/patch/release/nightly.yml (SH-035) + `build.yml` + `release.yml` promote-job | ✅ shepherd.yml | ✅ shepherd-gates.yml | ✅ verifier green (SH-030) | ✅ pre-commit `make check` pre-push | ✅ diff-aware → `scripts/smart-check.sh` |
 
-**Totals (second pass):** 67 ✅ · 9 ⚠️ · 1 ❌ (of 77 cells). First pass was 42 ✅ · 17 ⚠️ · 18 ❌ — a net shift of +25 ✅.
+**Totals (third pass):** 75 ✅ · 1 ⚠️ · 1 ❌ (of 77 cells). Second pass was 67 ✅ · 9 ⚠️ · 1 ❌ — a net shift of +8 ✅ since the second pass (and +33 ✅ since the first pass).
 
 **By column:**
 
-| Column | ✅ | ⚠️ | ❌ | Δ since first pass |
+| Column | ✅ | ⚠️ | ❌ | Δ since second pass |
 |---|---|---|---|---|
-| 1 default branch `dev` | 7 | 0 | 0 | +1 ✅ (SH-032) |
+| 1 default branch `dev` | 7 | 0 | 0 | — |
 | 2 dev+main both exist | 7 | 0 | 0 | — |
 | 3 Makefile 9 targets | 7 | 0 | 0 | — |
 | 4 `.shepherd.yml` v1 | 7 | 0 | 0 | — |
 | 5 dependabot.yml | 7 | 0 | 0 | — |
-| 6 tiered workflow names | 1 | 5 | 1 | — (alias policy unchanged) |
+| 6 tiered workflow names | 6 | 0 | 1 | +5 ✅ (SH-035) |
 | 7 shepherd caller | 7 | 0 | 0 | — |
 | 8 gates caller | 7 | 0 | 0 | — |
-| 9 SHA-pinned actions | 7 | 0 | 0 | +6 ✅ (SH-030) |
-| 10 pre-push hook | 7 | 0 | 0 | +4 ✅ (SH-033) |
-| 11 test-affected diff-aware | 3 | 4 | 0 | — (alias policy unchanged) |
+| 9 SHA-pinned actions | 7 | 0 | 0 | — |
+| 10 pre-push hook | 7 | 0 | 0 | — |
+| 11 test-affected diff-aware | 6 | 1 | 0 | +3 ✅ (SH-036 / SH-037 / SH-038) |
 
 ---
 
@@ -94,13 +122,15 @@ Ordered by severity. Items marked **critical** block an invariant from `DESIGN.m
 
 ### Medium — workflow naming drift (column 6)
 
-Only shepherd has the native triad `ci-branch.yml` / `ci-patch.yml` / `ci-release.yml`. Five managed repos keep their legacy `ci.yml` + `release.yml` names and alias into the contract via the Makefile. HRC is the outlier: it has **no** `ci-release.yml` at all — only `lint.yml` + `release.yml` + `eas-build.yml`. This works mechanically (the contract is in the Makefile targets, not the filenames) but hurts auditability on HRC specifically.
+- **SH-035 — Workflow filename convergence to `ci-{branch,patch,release}.yml` across the fleet. _Shipped 2026-11-22_.** On 5 non-HRC repos: `ci.yml` renamed to `ci-branch.yml`; `ci-patch.yml` dropped in from `templates/ci-patch.yml`. Forge also renamed `nightly.yml` → `ci-nightly.yml`. Job names preserved so existing branch-protection rulesets still resolve. PRs: [healthy #40](https://github.com/bboortz/healthy/pull/40), [beaconry #107](https://github.com/bboortz/beaconry/pull/107), [homelab #268](https://github.com/bb-claw/homelab/pull/268), [kernel-test #117](https://github.com/bb-claw/kernel-test/pull/117), [forge #171](https://github.com/bboortz/forge/pull/171). Shepherd itself needed no change (already native). HRC was explicitly scoped out per user direction (React Native / Expo flow doesn't benefit from the native-repo triad). Column 6 now green on 6/7 repos; the single ❌ is HRC — tracked as out-of-scope.
 
-- **SH-035 _(previously numbered SH-034 in the first pass; renumbered because SH-034 was taken by the step-macro exit-code fix)_ — Optional convergence to `ci-{branch,patch,release}.yml` filenames across the fleet.** Backlog candidate. Low priority: the invariant lives in the Makefile, not the filename; merge-commit git history already makes this grep-friendly. Could be an R2-era cosmetic PR. HRC gets the biggest value (addresses the sole ❌ cell in the matrix).
+### Low — `test-affected` identity aliases
 
-### Low — `test-affected` identity aliases on 4 repos (shepherd, healthy, HRC, kernel-test)
-
-- **No story.** `dev-cycle.contract.tiered-make-targets` explicitly permits identity aliasing when "each repo aliases to its native idiom or inherits the identity default." Shepherd has no app tier so `test-acceptance` is the only test corpus. Healthy's `test` is 3 min — already inside the ci-branch budget. HRC has no module graph yet. kernel-test's `ci-test` is framework-only (no kernel tree required). These are documented, deliberate, and contract-compliant.
+- **SH-036 — Shepherd diff-aware `test-affected` via `scripts/test-affected.sh`. _Shipped 2026-11-22_ ([PR #44](https://github.com/bboortz/shepherd/pull/44)).** Replaced `test-affected: test-acceptance` identity alias with a diff-aware shell wrapper keyed on `origin/dev` merge-base; bailouts on Makefile / bump.zig / build.zig / workflows / CAPABILITIES.md changes.
+- **SH-037 — Healthy diff-aware `test-affected` via `scripts/test-affected.sh`. _Shipped 2026-11-22_ ([PR #41](https://github.com/bboortz/healthy/pull/41)).** Same pattern as SH-036, adapted to healthy's two test tiers (`test/run.sh` + `test/acceptance/test_HC_<N>_*.sh`). Replaces the `test-affected: test` identity alias.
+- **SH-038 — kernel-test diff-aware `test-affected` via `scripts/test-affected.sh`. _Shipped 2026-11-22_ ([PR #118](https://github.com/bb-claw/kernel-test/pull/118)).** Same pattern again, adapted to kernel-test's framework-only CI tests (`tests/ci/test-*.sh`). Replaces the `test-affected: ci-test` identity alias.
+- **HRC `test-affected: test` identity alias — no story.** `dev-cycle.contract.tiered-make-targets` explicitly permits identity aliasing when the repo "has no module graph yet." HRC is a React Native app with no TS path-aware test selection; the identity alias is documented and contract-compliant. Would become shippable once HRC grows a module graph.
+- **Beaconry (`test-updates`), homelab (`test-updates`), forge (`scripts/smart-check.sh`) — already diff-aware** from earlier stories (BC-149 / HL-xx / FG-017). Unchanged this pass.
 
 ### Orthogonal — SH-034 step-macro exit-code fix (_Shipped 2026-11-22_)
 
