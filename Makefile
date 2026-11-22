@@ -20,7 +20,7 @@ BUMP := bin/shepherd-bump
         verify-traceability verify-docs-layout verify-caps-traceability \
         verify-version-bumped verify-changelog install-hooks clean \
         lint test-affected smoke release-artifacts \
-        ci-branch ci-patch ci-release ci-nightly ci-nightly-body ci-timing-init
+        ci-branch ci-patch ci-release ci-release-promote ci-nightly ci-nightly-body ci-timing-init
 
 help:
 	@echo "shepherd targets:"
@@ -171,10 +171,27 @@ ci-patch: ci-timing-init
 	$(call step,smoke,$(MAKE) smoke)
 	@$(call ci-timing-finish-cmd,ci-patch,$(CI_PATCH_BUDGET))
 
-# ci-release: placeholder. Shepherd adds a real release.yml via SH-029
-# (branching convergence: cut dev + FF-promote dev→main + tag).
+# ci-release-promote: fast-forward main to dev + tag from VERSION (SH-029).
+# Must run on `dev` branch. Mutates the working tree; intended for CI only.
+# Shared contract shape; see templates/Makefile.contract.snippet.
+ci-release-promote:
+	@current=$$(git branch --show-current); \
+	 [ "$$current" = "dev" ] || { echo "ci-release-promote must run on 'dev', got '$$current'"; exit 1; }
+	@[ -f VERSION ] || { echo "VERSION file missing — cannot determine tag"; exit 1; }
+	@version=$$(cat VERSION | tr -d '[:space:]'); \
+	 echo "SH-029 promote: dev → main as v$$version"; \
+	 git fetch origin main && \
+	 git checkout main && \
+	 git merge --ff-only origin/dev && \
+	 git tag "v$$version" HEAD && \
+	 git push origin main && \
+	 git push origin "v$$version" && \
+	 git checkout dev
+
+# ci-release: promote + emit timing. Shepherd has no SBOM/signing yet; that
+# arrives in a follow-up SH if needed.
 ci-release: ci-timing-init
-	$(call step,release,echo "ci-release: shepherd release flow lands with SH-029 (dev → main FF + tag)")
+	$(call step,release-promote,$(MAKE) ci-release-promote)
 	@$(call ci-timing-finish-cmd,ci-release,$(CI_RELEASE_BUDGET))
 
 # ci-nightly: nightly slow lane. Failures open a needs-human issue.

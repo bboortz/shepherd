@@ -24,7 +24,7 @@
 # Spec: docs/specs/dev-cycle-contract.md + docs/specs/ci-timing.md
 # -----------------------------------------------------------------------------
 
-.PHONY: ci-branch ci-patch ci-release ci-nightly ci-nightly-body \
+.PHONY: ci-branch ci-patch ci-release ci-release-promote ci-nightly ci-nightly-body \
         test-affected smoke release-artifacts \
         ci-timing-init
 
@@ -106,11 +106,29 @@ ci-patch: ci-timing-init
 	$(call step,smoke,$(MAKE) smoke)
 	@$(call ci-timing-finish-cmd,ci-patch,$(CI_PATCH_BUDGET))
 
-# ci-release: tag + publish. No build. Repos override to add signing/SBOM etc.
-# For image repos: override to `docker buildx imagetools create` promoting
-# sha-<commit> to the version tag. See docs/specs/dev-cycle-contract.md.
+# ci-release-promote: fast-forward main to dev + tag from VERSION.
+# Shared across the fleet (SH-029). Repos' `make ci-release` should call this
+# then add their own publish/sign/SBOM steps. Must run on `dev` branch.
+# Mutates the working tree; intended for CI only.
+ci-release-promote:
+	@current=$$(git branch --show-current); \
+	 [ "$$current" = "dev" ] || { echo "ci-release-promote must run on 'dev', got '$$current'"; exit 1; }
+	@[ -f VERSION ] || { echo "VERSION file missing — cannot determine tag"; exit 1; }
+	@version=$$(cat VERSION | tr -d '[:space:]'); \
+	 echo "SH-029 promote: dev → main as v$$version"; \
+	 git fetch origin main && \
+	 git checkout main && \
+	 git merge --ff-only origin/dev && \
+	 git tag "v$$version" HEAD && \
+	 git push origin main && \
+	 git push origin "v$$version" && \
+	 git checkout dev
+
+# ci-release: default body calls promote-only (no repo-specific publish).
+# Repos override to add SBOM / signing / image push / release notes AFTER
+# ci-release-promote (do the promote first so anything we sign is what landed).
 ci-release: ci-timing-init
-	$(call step,release,echo "override ci-release in your Makefile to publish")
+	$(call step,release-promote,$(MAKE) ci-release-promote)
 	@$(call ci-timing-finish-cmd,ci-release,$(CI_RELEASE_BUDGET))
 
 # ci-nightly: slow lane. Failures open a needs-human issue (research-doc
