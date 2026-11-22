@@ -38,7 +38,7 @@ trap 'rm -rf "$tmp"' EXIT
 cat > "$tmp/benign.txt" <<'EOF'
 README.md
 poc/hub/hub.py
-docs/stories/BC-001.md
+src/feature/compass.ts
 EOF
 
 # Blocklist-touching file list.
