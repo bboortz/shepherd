@@ -2,7 +2,7 @@
 # test_SH_010_waiting.sh — R1-D: gate.waiting-period on agent flow (SH-010)
 # Story:  docs/stories/SH-010-waiting-period.md
 # Plan:   docs/plan/SH-010-waiting-period-plan.md
-# Covers: gate.waiting-period (agent flow),
+# CAPs: gate.waiting-period (agent flow),
 #         onboarding.structured-intent
 
 set -u
