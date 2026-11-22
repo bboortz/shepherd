@@ -38,7 +38,7 @@ Kernel-Test's existing `ci.yml` runs harness lint + 3-arch programs + self-tests
 
 ## Rollout
 
-- [x] kernel-test `.github/workflows/ci-nightly.yml` + Makefile landed (commit `08f3c90 feat(SH-024): nightly kernel smoke workflow`).
+- [x] kernel-test `.github/workflows/ci-nightly.yml` + Makefile landed on `dev` via **PR [#112](https://github.com/bb-claw/kernel-test/pull/112)** (2026-11-22). Earlier shepherd-side close-loop PR incorrectly stated the commit `08f3c90` was already on `main` — it was on the feature branch only at the time. Promoted to `main` via PR [#114](https://github.com/bb-claw/kernel-test/pull/114) + VERSION bump 0.1.0 → 0.1.1 via PR [#113](https://github.com/bb-claw/kernel-test/pull/113).
 - [x] shepherd story + plan close the loop here.
 - [ ] First nightly run will fire at 02:30 UTC — post-merge note added when it reports green/red.
 
