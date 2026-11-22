@@ -1,7 +1,7 @@
 ---
 id: SH-024
 slug: kernel-test-nightly
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
