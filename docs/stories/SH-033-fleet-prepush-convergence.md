@@ -1,7 +1,7 @@
 ---
 id: SH-033
 slug: fleet-prepush-convergence
-status: in-progress
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

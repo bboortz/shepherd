@@ -3,7 +3,7 @@ id: SH-033
 slug: fleet-prepush-convergence
 story: docs/stories/SH-033-fleet-prepush-convergence.md
 branch: feat/SH-033-verify-prepush
-status: in-progress
+status: shipped
 ---
 
 # SH-033 plan — Fleet pre-push convergence + `shepherd-bump --verify-prepush`
