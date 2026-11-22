@@ -177,9 +177,9 @@ The bot may only merge on its own where a repo allows it, and only when every ga
 
 **Path blocklist**
 
-- By default the agent may not touch workflows, secrets, deployment config, or the Shepherd registration file, so it cannot change its own rules.
+- By default the agent may not touch workflows, secrets, deployment config, the Shepherd registration file, or the shepherd-side onboarding templates (`templates/**`), so it cannot change its own rules or silently reshape what future managed repos receive.
 - Each repo can unblock specific paths.
-- Planned safeguard: the registration file and the workflows that run the bot can only be unblocked through a human-reviewed change, never by the bot or by a setting the bot can edit.
+- Planned safeguard: the registration file and the workflows that run the bot can only be unblocked through a human-reviewed change, never by the bot or by a setting the bot can edit. `templates/**` carries the same safeguard (SH-014, 2026-11-22).
 
 **Failed fixes**
 
@@ -278,6 +278,7 @@ This plan supersedes the phases in section 10 for the first public version. Four
 - Configurable gate settings fully documented: monitored pipelines, diff size, waiting period, scan scope, retries, budgets.
 - Issue templates for bug reports and feedback, a contributing guide, and a security policy.
 - Support for the most common ecosystems first. Proposal: npm, pip and Docker. Final list is still open.
+- **Dev-cycle contract adopted across the fleet (SH-014).** Every managed repo exposes `make build`, `make test`, `make ci-branch`, `make ci-patch`, `make ci-release`, `make ci-nightly` with the budgets in `docs/specs/dev-cycle-contract.md`. Enforced by `shepherd-bump --verify-contract` (SH-017). HRC catches up via SH-018; the other four pilots migrate via SH-021/022/023/024; healthy serves as reference (SH-025).
 - 5 friendly testers run it on their own repos, and their friction points are fixed.
 
 **Out of scope:** central fleet bot, discovery, GitHub App, device monitoring, dashboards.
@@ -329,6 +330,11 @@ This plan supersedes the phases in section 10 for the first public version. Four
 - **Required `.shepherd.yml` in every managed repo (SH-007).** Flips the previous optional-config and zero-config-default principles. Rationale: (a) explicit beats magic — each repo declares its risk tier, auto-merge policy, build/test commands in the open; (b) auditable at the repo boundary — no cross-referencing shepherd defaults; (c) symmetric with SH-011's `.github/dependabot.yml` enforcement. Cost: one extra copy-paste in the quickstart (`templates/shepherd.yml` → `.shepherd.yml`). 15-min setup budget intact.
 - **Dependabot as a per-repo baseline, alongside `shepherd-bump` (SH-011).** Shepherd enforces the presence of a well-formed `.github/dependabot.yml` on every managed repo (`shepherd-bump --verify-dependabot`, default `on`; opt-out via `.shepherd.yml`). Each repo can additionally opt into **gated auto-merge of Dependabot PRs** (default `off`) — patch + minor only, ≤50 non-lockfile lines, ≥24 h since upstream release (npm + github_actions ecosystems; others fall through to needs-human). `gate.scan-not-worse` is **not** applied on this path and is tracked as a documented gap until SH-009 ships. Dependabot does **not** replace `shepherd-bump` or the smart-fix agent — it's a hygiene floor that reduces vulnerability backlog on managed repos without adding third-party actions to the critical path (the auto-merge workflow uses pure `gh` CLI + title parsing; no `fetch-metadata` action).
 - **Prompt-injection drill is part of the trust boundary (SH-005).** A replayable, offline injection harness on `bboortz/shepherd` (`make injection-drill`, `.github/workflows/injection-drill.yml`) exercises the shepherd-poc policy chain against a curated fixture library of adversarial agent responses. A failure blocks merge to `main`. The drill is pure replay — no live Anthropic calls, no PR writes, no secrets — and is treated as a trust-boundary invariant alongside §12's path blocklist and sandbox rules: changes to `validate.sh` or the path blocklist must not reduce drill coverage. Two live-API fixtures (`model-identity-escalation`, `injection-in-manifest`) and one R2-scope gap (`fake-fix-benign-looking`) are parked in the fixture library and tracked. Fleet-side: `scripts/shepherd-poc/` is now protected (in addition to `.github/workflows/`, `.shepherd.yml`, `scripts/release.sh`, `VERSION`, secrets patterns) — the enforcement scripts themselves cannot be modified by the agent.
+
+### Decided on 2026-11-22
+
+- **One pipeline model across the fleet (SH-014 umbrella).** Every managed repo exposes six `make` targets: `build`, `test` (the shepherd verifier's hook, unchanged), and the four tiered `ci-branch` / `ci-patch` / `ci-release` / `ci-nightly` with budgets 5 min / 5 min / 15 min / unbounded. Build-once-promote: the artifact keyed by commit SHA from `ci-branch` is what `ci-patch` smokes and `ci-release` promotes. `timeout-minutes` enforces budgets at the workflow level; a tier that cannot meet it moves work to nightly, never raises the cap. Full contract: `docs/specs/dev-cycle-contract.md`. Timing emission: `docs/specs/ci-timing.md`. Enforcement: `shepherd-bump --verify-contract` (SH-017) + needs-human. Branch flow stays `feat/* → dev → main` with merge commits into dev; **not** squash. Rationale: pipelines diverged across the fleet (dev-cycle doc 2026-11-22). The uniform shape makes Shepherd's verifier portable and enables a future scope-level-3 agent to propose Makefile improvements without touching workflow YAML (which stays on the §12 protected list).
+- **`templates/**` added to the §12 protected-files list (SH-014).** `templates/shepherd.yml`, `templates/caller-shepherd.yml`, `templates/Makefile.contract.snippet`, and the four `templates/ci-*.yml` workflows all propagate INTO managed repos through onboarding. A silent edit by the agent would reshape what future onboarders receive. Matches the existing rule for `.github/workflows/**` and `scripts/shepherd-poc/**`.
 
 ### Release schedule
 

@@ -1,0 +1,36 @@
+---
+# Dev-cycle contract (SH-014) — tier 3: release promotion.
+# Budget: 15 minutes wall-clock. NO new build may start here.
+# Fast-forward dev -> main; tag; publish images/sigs in parallel.
+#
+# Copy this file to .github/workflows/ci-release.yml in your managed repo.
+#
+# Spec: docs/specs/dev-cycle-contract.md
+name: ci-release
+
+"on":
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15    # hard budget cap (SH-014).
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Run release-tier promotion
+        run: make ci-release
+
+      - name: Upload ci-timing.json
+        if: always()
+        uses: actions/upload-artifact@11bd71901bbe5b1630ceea73d27ca5f4b3e71854  # v4.4.3
+        with:
+          name: ci-timing-release
+          path: build/ci-timing.json
+          if-no-files-found: ignore
