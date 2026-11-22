@@ -1,7 +1,7 @@
 ---
 id: SH-026
 slug: baseline-capture
-status: draft
+status: in-progress
 created: 2026-11-22
 owner: @benni
 ---
@@ -39,11 +39,31 @@ Ships right after SH-019 (fleet contract rollout) so `ci-branch` adoption hasn't
 
 ## 5. Happy path
 
-_TBD — filled when picked up. Expected: `./scripts/measure-baseline.sh > docs/specs/dev-cycle-baseline.md`, commit, done._
+```
+$ scripts/measure-baseline.sh > docs/specs/dev-cycle-baseline.md
+measure-baseline: 7 repo(s) had tuples below MIN_SAMPLES=10
+$ echo $?
+2    # warning-exit: at least one (repo,wf,event) had < 10 samples
+```
+
+Exit 2 on MIN_SAMPLES breach is expected on day one — some workflow+event combinations only fire once a month (release workflows, scheduled dependabot). The capture is still valid and committable.
+
+Real captured data (2026-11-22):
+
+- `bboortz/healthy / CI / pull_request`: 3.0 min median (dev-cycle doc claim ✅)
+- `bb-claw/homelab / CI / pull_request`: 7.1 min median (dev-cycle doc claim ✅)
+- `bboortz/forge / CI / pull_request`: 11.8 min median (NEW — dev-cycle doc had no timings)
+- `bboortz/forge / Nightly check-strict / schedule`: 50.6 min (NEW — confirms the cold-build pain)
+- `bboortz/beaconry / CI / pull_request`: 4.0 min median (NEW — dev-cycle doc had no timings)
+- `bb-claw/kernel-test / CI / pull_request`: 1.7 min median (NEW)
 
 ## 6. Edge cases / failure modes that matter
 
-_TBD — filled when picked up. Likely: API rate limiting, HRC's low run count, repos with multiple workflows per event._
+- `gh` lookup fails on any repo → row shows `— | 0 | — | — | —`; script exits 1.
+- A workflow has fewer than MIN_SAMPLES runs → row gets ⚠️ marker; script exits 2 (warning).
+- A repo has multiple workflows with the same name but different `on:` triggers → grouped by `(workflow, event)` tuple, one row each.
+- Script replayable offline via `SH_026_SAMPLE_FILE=fixture.jsonl` → acceptance test uses this.
+- Script re-runnable — produces different numbers for runs since the last capture; snapshot is the "point in time" the per-repo speedup stories compare against.
 
 ## 7. Out of scope
 
