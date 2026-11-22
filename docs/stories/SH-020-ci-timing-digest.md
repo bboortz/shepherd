@@ -1,7 +1,7 @@
 ---
 id: SH-020
 slug: ci-timing-digest
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
