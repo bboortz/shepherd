@@ -20,12 +20,54 @@ jobs:
           private-key: ${{ secrets.SHEPHERD_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Compose and send weekly digest
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install jq
+        run: sudo apt-get update -qq && sudo apt-get install -y jq
+
+      # SH-020: timing digest + DORA. Compares live fleet CI timings against
+      # the SH-026 frozen baseline; flags >=25 % regressions. Exit 2 if any
+      # repo regressed; we tee output to the step summary + ntfy but do NOT
+      # fail the workflow — regressions are informational on a weekly cron.
+      - name: Compose timing digest
+        id: digest
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          set -o pipefail
+          scripts/digest-timing.sh > /tmp/digest.md 2> /tmp/digest-regressions.txt
+          rc=$?
+          echo "regression_count=$(wc -l < /tmp/digest-regressions.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          cat /tmp/digest.md >> "$GITHUB_STEP_SUMMARY"
+          # Continue even on exit 2 (regressions reported, workflow continues to ntfy).
+          exit 0
+
+      - name: Post digest to ntfy
+        if: ${{ secrets.NTFY_TOPIC_URL != '' }}
+        env:
           NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
         run: |
-          # Scaffold per DESIGN §9 (digest: weekly). Implemented in a later release.
-          # - summarise fleet activity over the past week (PRs opened, merged, needs-human issues, failed verifications)
-          # - POST summary to $NTFY_TOPIC_URL
-          echo "digest: not yet implemented"
+          body=$(cat /tmp/digest.md)
+          curl -sS -H "Title: Shepherd weekly digest" -d "$body" "$NTFY_TOPIC_URL" || true
+
+      - name: Open needs-human on regression
+        if: steps.digest.outputs.regression_count != '0'
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          # One issue per distinct (repo, workflow, event) line in the
+          # regressions file. Dedupe by title on each target repo.
+          while IFS= read -r line; do
+            # Line shape: "regression: owner/repo WORKFLOW EVENT: median X min (baseline Y, +Z%)"
+            repo=$(echo "$line" | awk '{print $2}')
+            wf=$(echo "$line" | awk '{print $3}')
+            ev=$(echo "$line" | awk '{print $4}' | tr -d ':')
+            title="[shepherd] dev-cycle budget breach: ${wf} ${ev}"
+            # Dedupe: comment on existing open issue instead of opening a new one.
+            existing=$(gh issue list -R "$repo" --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" -R "$repo" --body "$line" || true
+            else
+              gh issue create -R "$repo" --title "$title" --body "$line" --label needs-human || true
+            fi
+          done < /tmp/digest-regressions.txt
