@@ -6,22 +6,24 @@
 //!   shepherd-bump --pr                          Open PRs for bumpable deps. (TODO)
 //!   shepherd-bump --verify-dependabot           Verify .github/dependabot.yml presence+shape (SH-011).
 //!   shepherd-bump --verify-contract             Verify Makefile exposes the 8 SH-014 contract targets (SH-017).
+//!   shepherd-bump --verify-prepush              Verify .pre-commit-config.yaml or .husky/pre-push runs `make check` (SH-033).
 //!
 //! Flags:
 //!   --root PATH         Repo root (default: cwd).
 //!   --ecosystem NAME    Only `gh-actions` is supported (bump modes only).
 //!
 //! Exit codes: 0 ok, 1 cannot open root / I/O, 2 usage,
-//!             3 dependabot.yml OR Makefile missing,
-//!             4 dependabot.yml malformed OR contract target missing.
+//!             3 dependabot.yml OR Makefile missing OR no pre-push config file,
+//!             4 dependabot.yml malformed OR contract target missing OR pre-push doesn't call `make check`.
 //!
 //! See docs/stories/SH-001-retire-renovate.md,
 //!     docs/stories/SH-011-dependabot-enforce-automerge.md,
-//!     docs/stories/SH-017-verify-contract.md.
+//!     docs/stories/SH-017-verify-contract.md,
+//!     docs/stories/SH-033-fleet-prepush-convergence.md.
 
 const std = @import("std");
 
-const Mode = enum { list, check, pr, verify_dependabot, verify_contract, help };
+const Mode = enum { list, check, pr, verify_dependabot, verify_contract, verify_prepush, help };
 
 const Options = struct {
     mode: Mode = .help,
@@ -52,6 +54,7 @@ fn printUsage() void {
         \\       shepherd-bump --pr                   [--root PATH] [--ecosystem gh-actions]  (TODO)
         \\       shepherd-bump --verify-dependabot    [--root PATH]
         \\       shepherd-bump --verify-contract      [--root PATH]
+        \\       shepherd-bump --verify-prepush       [--root PATH]
         \\
     ;
     std.debug.print("{s}", .{msg});
@@ -72,6 +75,8 @@ fn parseArgs(args: []const []const u8) !Options {
             opts.mode = .verify_dependabot;
         } else if (std.mem.eql(u8, a, "--verify-contract")) {
             opts.mode = .verify_contract;
+        } else if (std.mem.eql(u8, a, "--verify-prepush")) {
+            opts.mode = .verify_prepush;
         } else if (std.mem.eql(u8, a, "--help") or std.mem.eql(u8, a, "-h")) {
             opts.mode = .help;
         } else if (std.mem.eql(u8, a, "--root")) {
@@ -492,6 +497,124 @@ fn cmdVerifyContract(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u
     return 0;
 }
 
+// ---------------------------------------------------------------------------
+// --verify-prepush (SH-033): verify a pre-push gate is wired on this repo.
+// Accepts two forms:
+//   (a) .pre-commit-config.yaml containing a hook with `entry: make check`
+//       inside a `stages: [pre-push]` block (or a stages wildcard).
+//   (b) .husky/pre-push script that invokes `make check`.
+// Exit 3 if neither file exists; exit 4 if present but doesn't call `make check`.
+// ---------------------------------------------------------------------------
+
+/// Return true if the pre-commit config has a hook whose entry is `make check`
+/// AND whose stages list includes `pre-push`. Permissive block-scanning
+/// (not a full YAML parser): look for consecutive lines matching the two
+/// invariants within the same hook.
+fn preCommitHasMakeCheck(contents: []const u8) bool {
+    var it = std.mem.splitScalar(u8, contents, '\n');
+    var saw_make_check_entry = false;
+    var saw_pre_push_stage = false;
+    while (it.next()) |raw| {
+        const line = trimTrailingWs(raw);
+        // Reset on a new `- id:` line (next hook).
+        const t = trimLeadingWs(line);
+        if (std.mem.startsWith(u8, t, "- id:")) {
+            if (saw_make_check_entry and saw_pre_push_stage) return true;
+            saw_make_check_entry = false;
+            saw_pre_push_stage = false;
+            continue;
+        }
+        // `entry: ... make check ...` — permissive: accept wrappers like
+        // `bash -c 'source .venv/bin/activate && make check'`.
+        if (std.mem.startsWith(u8, t, "entry:")) {
+            const rest = t[6..];
+            if (std.mem.indexOf(u8, rest, "make check") != null) {
+                saw_make_check_entry = true;
+            }
+        }
+        // `stages: [pre-push]` or `stages: [pre-push, ...]`.
+        if (std.mem.startsWith(u8, t, "stages:")) {
+            const rest = trimLeadingWs(t[7..]);
+            if (std.mem.indexOf(u8, rest, "pre-push") != null) {
+                saw_pre_push_stage = true;
+            }
+        }
+    }
+    return saw_make_check_entry and saw_pre_push_stage;
+}
+
+fn huskyPrePushHasMakeCheck(contents: []const u8) bool {
+    // Any line containing `make check` (comments stripped by substring match).
+    return std.mem.indexOf(u8, contents, "make check") != null;
+}
+
+fn cmdVerifyPrepush(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
+    var root = std.Io.Dir.cwd().openDir(io, opts.root, .{}) catch |err| {
+        std.debug.print("error: cannot open root '{s}': {s}\n", .{ opts.root, @errorName(err) });
+        return 1;
+    };
+    defer root.close(io);
+
+    // --- Opt-out check via .shepherd.yml (dev-cycle section) ------------
+    if (root.readFileAlloc(io, ".shepherd.yml", allocator, .limited(64 * 1024))) |cfg| {
+        defer allocator.free(cfg);
+        var it = std.mem.splitScalar(u8, cfg, '\n');
+        var in_dev_cycle = false;
+        while (it.next()) |raw| {
+            const t = trimLeadingWs(trimTrailingWs(raw));
+            if (std.mem.startsWith(u8, t, "dev_cycle:")) {
+                in_dev_cycle = true;
+                continue;
+            }
+            // Leaving the block: a non-indented key-like line.
+            if (in_dev_cycle and raw.len > 0 and raw[0] != ' ' and raw[0] != '\t') {
+                in_dev_cycle = false;
+            }
+            if (in_dev_cycle and std.mem.startsWith(u8, t, "prepush_enforce:")) {
+                const rest = trimLeadingWs(t["prepush_enforce:".len..]);
+                if (std.mem.eql(u8, rest, "false")) {
+                    std.debug.print("verify-prepush: opted out via .shepherd.yml (dev_cycle.prepush_enforce: false)\n", .{});
+                    return 0;
+                }
+            }
+        }
+    } else |err| switch (err) {
+        error.FileNotFound => {},
+        else => return err,
+    }
+
+    // --- Try .pre-commit-config.yaml first ------------------------------
+    if (root.readFileAlloc(io, ".pre-commit-config.yaml", allocator, .limited(256 * 1024))) |cfg| {
+        defer allocator.free(cfg);
+        if (preCommitHasMakeCheck(cfg)) {
+            std.debug.print("verify-prepush: ok (.pre-commit-config.yaml wires `make check` at pre-push)\n", .{});
+            return 0;
+        }
+        std.debug.print("verify-prepush: .pre-commit-config.yaml present but no hook with `entry: make check` + `stages: [pre-push]` (exit 4)\n", .{});
+        return 4;
+    } else |err| switch (err) {
+        error.FileNotFound => {}, // fall through to husky check
+        else => return err,
+    }
+
+    // --- Then try .husky/pre-push --------------------------------------
+    if (root.readFileAlloc(io, ".husky/pre-push", allocator, .limited(256 * 1024))) |cfg| {
+        defer allocator.free(cfg);
+        if (huskyPrePushHasMakeCheck(cfg)) {
+            std.debug.print("verify-prepush: ok (.husky/pre-push invokes `make check`)\n", .{});
+            return 0;
+        }
+        std.debug.print("verify-prepush: .husky/pre-push present but doesn't invoke `make check` (exit 4)\n", .{});
+        return 4;
+    } else |err| switch (err) {
+        error.FileNotFound => {},
+        else => return err,
+    }
+
+    std.debug.print("verify-prepush: no pre-push config found (.pre-commit-config.yaml or .husky/pre-push) (exit 3)\n", .{});
+    return 3;
+}
+
 fn cmdList(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
     if (!std.mem.eql(u8, opts.ecosystem, "gh-actions")) {
         std.debug.print("error: ecosystem '{s}' not supported (only 'gh-actions')\n", .{opts.ecosystem});
@@ -549,6 +672,7 @@ pub fn main(init: std.process.Init) !u8 {
         .list => try cmdList(allocator, io, opts),
         .verify_dependabot => try cmdVerifyDependabot(allocator, io, opts),
         .verify_contract => try cmdVerifyContract(allocator, io, opts),
+        .verify_prepush => try cmdVerifyPrepush(allocator, io, opts),
         .check, .pr => blk: {
             std.debug.print("error: --{s} not yet implemented (SH-001 follow-up)\n", .{@tagName(opts.mode)});
             break :blk 2;

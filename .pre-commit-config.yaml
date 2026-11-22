@@ -1,0 +1,41 @@
+# shepherd — pre-commit framework config (SH-033).
+# Install the pre-push hook with:
+#   pre-commit install -t pre-push
+#
+# Stages:
+#   pre-commit  (staged files, fast): yamllint on staged YAML.
+#   pre-push    (full local gate): `make check` — yaml-lint + md-lint +
+#               verify-memory-size + verify-traceability + build +
+#               test-acceptance + injection-drill. Target: ~30-60 s.
+#
+# Bypass in emergencies (document in PR body):
+#   git commit --no-verify
+#   git push   --no-verify
+
+repos:
+  # ── pre-commit stage (staged files, fast) ──────────────────────────────────
+  - repo: local
+    hooks:
+      - id: yamllint
+        name: yamllint (staged yaml files)
+        language: system
+        entry: yamllint
+        files: \.(yml|yaml)$
+        pass_filenames: true
+
+      - id: verify-memory-size
+        name: memory/*.md and CLAUDE.md ≤ 150 lines
+        language: system
+        entry: make verify-memory-size
+        pass_filenames: false
+        files: ^(memory/.*\.md|CLAUDE\.md)$
+
+  # ── pre-push stage (primary gate, heavy) ───────────────────────────────────
+  - repo: local
+    hooks:
+      - id: make-check
+        name: make check (pre-push — full local gate)
+        language: system
+        entry: make check
+        pass_filenames: false
+        stages: [pre-push]
