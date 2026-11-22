@@ -1,0 +1,37 @@
+---
+# Dev-cycle contract (SH-014) — nightly slow lane.
+# Budget: unbounded (target under 2 h). Full matrix, cold builds, compose,
+# kernel builds, mutation tests, cache warming. Failures open needs-human
+# issues; the slow lane does not block anyone.
+#
+# Copy this file to .github/workflows/ci-nightly.yml in your managed repo.
+#
+# Spec: docs/specs/dev-cycle-contract.md
+name: ci-nightly
+
+"on":
+  schedule:
+    - cron: "30 2 * * *"    # 02:30 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120    # soft target; nightly is unbounded by contract.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Run nightly slow lane
+        run: make ci-nightly
+
+      - name: Upload ci-timing.json
+        if: always()
+        uses: actions/upload-artifact@11bd71901bbe5b1630ceea73d27ca5f4b3e71854  # v4.4.3
+        with:
+          name: ci-timing-nightly
+          path: build/ci-timing.json
+          if-no-files-found: ignore

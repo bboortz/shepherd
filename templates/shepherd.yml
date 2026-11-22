@@ -49,3 +49,22 @@ dependabot:
   auto_merge: false       # if true, patch+minor Dependabot PRs auto-merge after
                           # §12 gates (≤50 lines + ≥24h since release + CI green).
                           # gate.scan-not-worse is deferred to SH-009.
+
+# Dev-cycle contract (SH-014 umbrella). Takes effect when SH-017 lands.
+contract:
+  enforce_enabled: true   # shepherd-bump --verify-contract checks the eight
+                          # Makefile contract targets (build, test, test-affected,
+                          # smoke, release-artifacts, ci-branch, ci-patch,
+                          # ci-release, ci-nightly). Opt out with `false`.
+
+# Risk-paths (SH-027). Distinct from the §12 blocklist: these paths are
+# AGENT-WRITABLE but a human MUST approve before auto-merge. Use for
+# sensitive-but-editable files: remediation logic, network roles, Dockerfiles.
+risk_paths: []            # [glob, ...] — a PR touching any match cannot auto-merge.
+
+# Auto-revert (SH-028). Opt-in automatic revert PR on ci-patch failure.
+# Phase 1 default is comment_only: true — opens the revert PR but does NOT
+# auto-merge it. Flip to false once the shape is proven.
+auto_revert:
+  enabled: false
+  comment_only: true

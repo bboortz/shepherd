@@ -1,0 +1,134 @@
+# shepherd dev-cycle contract (SH-014)
+# -----------------------------------------------------------------------------
+# Include this snippet from your repo Makefile. Each repo supplies its real
+# `build`, `test`, `lint` recipes; the snippet defines the eight contract
+# targets with sensible default aliases, plus timing wrappers.
+#
+# Usage in your Makefile:
+#
+#   include .make/shepherd-contract.mk   # or wherever you drop this file
+#
+#   # Your repo-specific targets:
+#   build:      ; zig build --prefix .
+#   test:       ; test/acceptance/...
+#   lint:       ; yamllint .
+#
+#   # Anchor on your repo's native idiom (optional — defaults below work):
+#   test-affected:     test-updates       # homelab
+#   # test-affected:   ; scripts/smart-check.sh         # forge
+#   # test-affected:   ; pytest -n auto -m "not slow"   # beaconry
+#
+# The four CI tiers reference your repo-specific targets. Override any tier
+# body by redefining it after the include.
+#
+# Spec: docs/specs/dev-cycle-contract.md + docs/specs/ci-timing.md
+# -----------------------------------------------------------------------------
+
+.PHONY: ci-branch ci-patch ci-release ci-nightly ci-nightly-body \
+        test-affected smoke release-artifacts \
+        ci-timing-init
+
+# Budgets (seconds). Match workflow timeout-minutes × 60.
+CI_BRANCH_BUDGET  ?= 300
+CI_PATCH_BUDGET   ?= 300
+CI_RELEASE_BUDGET ?= 900
+CI_NIGHTLY_BUDGET ?= 0      # 0 = unbounded (ci-nightly)
+
+CI_TIMING_FILE  ?= build/ci-timing.json
+CI_STEPS_FILE   ?= build/ci-steps.jsonl
+CI_RELEASE_DIR  ?= build/release
+
+# -----------------------------------------------------------------------------
+# Default aliases — override in your Makefile if your repo has a native idiom.
+# A repo with no affected-only mechanism stays compliant via the identity alias
+# (test-affected: test); the speedup lands later as a dedicated SH.
+# -----------------------------------------------------------------------------
+
+test-affected: test
+
+# Default smoke = test. Image repos override to `docker run --health-cmd` etc.
+smoke: test
+
+# Default release-artifacts = build. Image repos override to push sha-<commit>
+# to a registry. Pure-test repos may leave the default (empty build/ dir is fine).
+release-artifacts: build
+
+# -----------------------------------------------------------------------------
+# Timing helpers
+# -----------------------------------------------------------------------------
+
+# $(call step,NAME,RECIPE) — run RECIPE, append {name,seconds} to the steps file.
+define step
+	@mkdir -p $(dir $(CI_STEPS_FILE))
+	@_t0=$$(date +%s.%N); \
+	 $(2); \
+	 _t1=$$(date +%s.%N); \
+	 _secs=$$(awk -v a="$$_t1" -v b="$$_t0" 'BEGIN{printf "%.3f", a-b}'); \
+	 printf '{"name":"%s","seconds":%s}\n' "$(1)" "$$_secs" >> $(CI_STEPS_FILE)
+endef
+
+ci-timing-init:
+	@mkdir -p $(dir $(CI_STEPS_FILE)) $(CI_RELEASE_DIR)
+	@: > $(CI_STEPS_FILE)
+	@echo "$$(date -u +%FT%TZ)" > build/ci-started-at
+
+# $(call ci-timing-finish-cmd,TARGET,BUDGET) — emit build/ci-timing.json.
+define ci-timing-finish-cmd
+	finished_at=$$(date -u +%FT%TZ); \
+	started_at=$$(cat build/ci-started-at 2>/dev/null || echo "$$finished_at"); \
+	total=$$(awk -F'[:,]' '/"seconds":/ {s=$$0; gsub(/[^0-9.-]/,"",$$2); sum+=$$2} END{printf "%.3f", sum}' $(CI_STEPS_FILE) 2>/dev/null || echo 0); \
+	git_sha=$$(git rev-parse --short HEAD 2>/dev/null || echo unknown); \
+	runner=$${RUNNER_OS:+$${RUNNER_OS}-$${RUNNER_ARCH}}; \
+	runner=$${runner:-$$(uname -s)-$$(uname -m)}; \
+	steps_json=$$(awk 'BEGIN{printf "["} NR>1{printf ","} {printf "%s", $$0} END{printf "]"}' $(CI_STEPS_FILE) 2>/dev/null || echo '[]'); \
+	printf '{"schema_version":1,"target":"%s","budget_seconds":%s,"total_seconds":%s,"steps":%s,"git_sha":"%s","runner":"%s","started_at":"%s","finished_at":"%s"}\n' \
+	  "$(1)" "$(2)" "$$total" "$$steps_json" "$$git_sha" "$$runner" "$$started_at" "$$finished_at" \
+	  > $(CI_TIMING_FILE)
+endef
+
+# -----------------------------------------------------------------------------
+# Tier bodies — override in your Makefile if a tier needs a different recipe.
+# -----------------------------------------------------------------------------
+
+# ci-branch: lint + affected-only test + build the artifact ONCE.
+# The workflow (templates/ci-branch.yml) then uploads build/release/** keyed
+# by commit SHA for cross-tier promotion.
+ci-branch: ci-timing-init
+	$(call step,lint,$(MAKE) lint)
+	$(call step,test-affected,$(MAKE) test-affected)
+	$(call step,release-artifacts,$(MAKE) release-artifacts)
+	@$(call ci-timing-finish-cmd,ci-branch,$(CI_BRANCH_BUDGET))
+
+# ci-patch: downloads the ci-branch artifact (via the workflow) and smokes it.
+# No build. No release-artifacts. Repos with a staging env override `smoke` to
+# deploy to staging + health-check.
+ci-patch: ci-timing-init
+	$(call step,smoke,$(MAKE) smoke)
+	@$(call ci-timing-finish-cmd,ci-patch,$(CI_PATCH_BUDGET))
+
+# ci-release: tag + publish. No build. Repos override to add signing/SBOM etc.
+# For image repos: override to `docker buildx imagetools create` promoting
+# sha-<commit> to the version tag. See docs/specs/dev-cycle-contract.md.
+ci-release: ci-timing-init
+	$(call step,release,echo "override ci-release in your Makefile to publish")
+	@$(call ci-timing-finish-cmd,ci-release,$(CI_RELEASE_BUDGET))
+
+# ci-nightly: slow lane. Failures open a needs-human issue (research-doc
+# checklist). Repos override `ci-nightly-body` with their nightly recipe; the
+# issue wrapper stays.
+ci-nightly: ci-timing-init
+	@if ! $(MAKE) ci-nightly-body; then \
+	  rc=$$?; \
+	  if command -v gh >/dev/null 2>&1 && [ -n "$$GITHUB_REPOSITORY" ]; then \
+	    gh issue create \
+	      --title "[shepherd] ci-nightly failed on $$(git rev-parse --short HEAD 2>/dev/null || echo HEAD)" \
+	      --body "ci-nightly failed with exit code $$rc. Workflow run: $${GITHUB_SERVER_URL:-https://github.com}/$${GITHUB_REPOSITORY}/actions/runs/$${GITHUB_RUN_ID}." \
+	      --label needs-human || true; \
+	  fi; \
+	  exit $$rc; \
+	fi
+	@$(call ci-timing-finish-cmd,ci-nightly,$(CI_NIGHTLY_BUDGET))
+
+# Default body: placeholder. Repos override with their full slow suite.
+ci-nightly-body:
+	@echo "override ci-nightly-body in your Makefile with the slow suite (full matrix, cold builds, kernel builds, etc.)"

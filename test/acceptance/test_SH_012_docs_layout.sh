@@ -93,6 +93,7 @@ for f in $files; do
     docs/stories/SH-012-docs-layout-reshape.md) continue ;;
     docs/plan/SH-012-docs-layout-reshape-plan.md) continue ;;
     test/acceptance/test_SH_012_docs_layout.sh) continue ;;
+    test/acceptance/test_SH_013_traceability.sh) continue ;; # names fixture paths (docs/stories/SH-X-one.md) in its tmpdir harness
   esac
   # Extract candidate paths. Two forms:
   #   1. docs/<file>.md               → check exists
