@@ -8,24 +8,26 @@
 //!   shepherd-bump --verify-contract             Verify Makefile exposes the 8 SH-014 contract targets (SH-017).
 //!   shepherd-bump --verify-sha-pin              Verify every uses: ref in .github/ is 40-hex SHA-pinned (SH-030).
 //!   shepherd-bump --verify-prepush              Verify .pre-commit-config.yaml or .husky/pre-push runs `make check` (SH-033).
+//!   shepherd-bump --verify-timeouts             Verify ci-{branch,patch,release,nightly}.yml jobs cap timeout-minutes to tier budgets (SH-039).
 //!
 //! Flags:
 //!   --root PATH         Repo root (default: cwd).
 //!   --ecosystem NAME    Only `gh-actions` is supported (bump modes only).
 //!
 //! Exit codes: 0 ok, 1 cannot open root / I/O, 2 usage,
-//!             3 dependabot.yml OR Makefile missing OR no pre-push config file,
-//!             4 dependabot.yml malformed OR contract target missing OR unpinned uses: ref OR pre-push doesn't call `make check`.
+//!             3 dependabot.yml OR Makefile missing OR no pre-push config file OR tier workflow missing,
+//!             4 dependabot.yml malformed OR contract target missing OR unpinned uses: ref OR pre-push doesn't call `make check` OR timeout-minutes missing/over-budget.
 //!
 //! See docs/stories/SH-001-retire-renovate.md,
 //!     docs/stories/SH-011-dependabot-enforce-automerge.md,
 //!     docs/stories/SH-017-verify-contract.md,
 //!     docs/stories/SH-030-fleet-sha-pin-sweep.md,
-//!     docs/stories/SH-033-fleet-prepush-convergence.md.
+//!     docs/stories/SH-033-fleet-prepush-convergence.md,
+//!     docs/stories/SH-039-verify-timeouts.md.
 
 const std = @import("std");
 
-const Mode = enum { list, check, pr, verify_dependabot, verify_contract, verify_sha_pin, verify_prepush, help };
+const Mode = enum { list, check, pr, verify_dependabot, verify_contract, verify_sha_pin, verify_prepush, verify_timeouts, help };
 
 const Options = struct {
     mode: Mode = .help,
@@ -58,6 +60,7 @@ fn printUsage() void {
         \\       shepherd-bump --verify-contract      [--root PATH]
         \\       shepherd-bump --verify-sha-pin       [--root PATH]
         \\       shepherd-bump --verify-prepush       [--root PATH]
+        \\       shepherd-bump --verify-timeouts      [--root PATH]
         \\
     ;
     std.debug.print("{s}", .{msg});
@@ -82,6 +85,8 @@ fn parseArgs(args: []const []const u8) !Options {
             opts.mode = .verify_sha_pin;
         } else if (std.mem.eql(u8, a, "--verify-prepush")) {
             opts.mode = .verify_prepush;
+        } else if (std.mem.eql(u8, a, "--verify-timeouts")) {
+            opts.mode = .verify_timeouts;
         } else if (std.mem.eql(u8, a, "--help") or std.mem.eql(u8, a, "-h")) {
             opts.mode = .help;
         } else if (std.mem.eql(u8, a, "--root")) {
@@ -805,6 +810,105 @@ fn cmdVerifyShaPin(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 
     return 4;
 }
 
+// ---------------------------------------------------------------------------
+// --verify-timeouts (SH-039): each tier workflow's `jobs.<name>.timeout-minutes`
+// must be present and within the tier budget. Tier budgets from SH-014:
+//   ci-branch.yml  → ≤ 5  min
+//   ci-patch.yml   → ≤ 5  min
+//   ci-release.yml → ≤ 15 min
+//   ci-nightly.yml → ≤ 120 min (soft cap; unbounded by contract but workflows
+//                   should still carry a timeout to prevent zombie runs)
+// Missing workflow file: exit 3. Missing timeout-minutes: or over-budget: exit 4.
+// Workflows not in the tier set are ignored.
+// ---------------------------------------------------------------------------
+
+const TierBudget = struct {
+    workflow: []const u8,
+    max_minutes: u32,
+};
+
+const TIER_BUDGETS = [_]TierBudget{
+    .{ .workflow = "ci-branch.yml", .max_minutes = 5 },
+    .{ .workflow = "ci-patch.yml", .max_minutes = 5 },
+    .{ .workflow = "ci-release.yml", .max_minutes = 15 },
+    .{ .workflow = "ci-nightly.yml", .max_minutes = 120 },
+};
+
+/// Scan a workflow file for the highest `timeout-minutes:` value present in
+/// any job. Returns null if the key is absent. Permissive YAML scan (not a
+/// full parser) — matches `    timeout-minutes: <N>` at any indent.
+fn readMaxTimeout(contents: []const u8) ?u32 {
+    var max: ?u32 = null;
+    var it = std.mem.splitScalar(u8, contents, '\n');
+    while (it.next()) |raw| {
+        const line = trimTrailingWs(raw);
+        const t = trimLeadingWs(line);
+        const key = "timeout-minutes:";
+        if (!std.mem.startsWith(u8, t, key)) continue;
+        var rest = trimLeadingWs(t[key.len..]);
+        // Strip inline comment.
+        if (std.mem.indexOfScalar(u8, rest, '#')) |hash_pos| {
+            rest = trimTrailingWs(rest[0..hash_pos]);
+        }
+        const val = std.fmt.parseInt(u32, rest, 10) catch continue;
+        if (max == null or val > max.?) max = val;
+    }
+    return max;
+}
+
+fn cmdVerifyTimeouts(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
+    var root = std.Io.Dir.cwd().openDir(io, opts.root, .{}) catch |err| {
+        std.debug.print("error: cannot open root '{s}': {s}\n", .{ opts.root, @errorName(err) });
+        return 1;
+    };
+    defer root.close(io);
+
+    var fail = false;
+    var missing = false;
+
+    for (TIER_BUDGETS) |b| {
+        const rel = try std.fmt.allocPrint(allocator, ".github/workflows/{s}", .{b.workflow});
+        defer allocator.free(rel);
+
+        const contents = root.readFileAlloc(io, rel, allocator, .limited(1 * 1024 * 1024)) catch |err| switch (err) {
+            error.FileNotFound => {
+                std.debug.print("verify-timeouts: {s} missing (exit 3)\n", .{rel});
+                missing = true;
+                continue;
+            },
+            else => return err,
+        };
+        defer allocator.free(contents);
+
+        const maybe_max = readMaxTimeout(contents);
+        if (maybe_max == null) {
+            std.debug.print(
+                "verify-timeouts: {s} has no `timeout-minutes:` key — budget {d} min unenforced\n",
+                .{ rel, b.max_minutes },
+            );
+            fail = true;
+            continue;
+        }
+        const max = maybe_max.?;
+        if (max > b.max_minutes) {
+            std.debug.print(
+                "verify-timeouts: {s} timeout-minutes={d} > budget {d} min\n",
+                .{ rel, max, b.max_minutes },
+            );
+            fail = true;
+            continue;
+        }
+        std.debug.print(
+            "verify-timeouts: ok {s} timeout-minutes={d} (budget {d})\n",
+            .{ rel, max, b.max_minutes },
+        );
+    }
+
+    if (missing) return 3;
+    if (fail) return 4;
+    return 0;
+}
+
 fn cmdList(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
     if (!std.mem.eql(u8, opts.ecosystem, "gh-actions")) {
         std.debug.print("error: ecosystem '{s}' not supported (only 'gh-actions')\n", .{opts.ecosystem});
@@ -864,6 +968,7 @@ pub fn main(init: std.process.Init) !u8 {
         .verify_contract => try cmdVerifyContract(allocator, io, opts),
         .verify_sha_pin => try cmdVerifyShaPin(allocator, io, opts),
         .verify_prepush => try cmdVerifyPrepush(allocator, io, opts),
+        .verify_timeouts => try cmdVerifyTimeouts(allocator, io, opts),
         .check, .pr => blk: {
             std.debug.print("error: --{s} not yet implemented (SH-001 follow-up)\n", .{@tagName(opts.mode)});
             break :blk 2;
