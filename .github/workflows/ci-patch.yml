@@ -36,6 +36,7 @@ jobs:
           path: build/release/
 
       - name: Run patch-tier gate
+        id: patch
         run: make ci-patch
 
       - name: Upload ci-timing.json
@@ -45,3 +46,52 @@ jobs:
           name: ci-timing-patch
           path: build/ci-timing.json
           if-no-files-found: ignore
+
+      # SH-028 auto-revert decision. Runs only when the patch-tier gate failed
+      # AND .shepherd.yml opts in. decide is pure; execute is gated on the
+      # decision. Blocklist short-circuit routes to needs-human instead.
+      - name: Auto-revert decision (SH-028)
+        if: failure() && steps.patch.conclusion == 'failure'
+        id: autorevert_decide
+        run: |
+          set -eu
+          git diff-tree --no-commit-id --name-only -r "${{ github.sha }}" > /tmp/sh-028-files.txt
+          if [ ! -f .shepherd.yml ]; then
+            echo "decision=SKIP:no-shepherd-yml" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          decision=$(scripts/shepherd-poc/auto-revert.sh decide .shepherd.yml /tmp/sh-028-files.txt | head -1)
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
+          echo "auto-revert decision: $decision"
+
+      - name: Auto-revert execute (SH-028)
+        if: |
+          failure()
+          && steps.patch.conclusion == 'failure'
+          && startsWith(steps.autorevert_decide.outputs.decision, 'REVERT:')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          mode="comment-only"
+          case "${{ steps.autorevert_decide.outputs.decision }}" in
+            REVERT:auto-merge) mode="auto-merge" ;;
+          esac
+          git config user.name  "shepherd-bot[bot]"
+          git config user.email "shepherd-bot@users.noreply.github.com"
+          scripts/shepherd-poc/auto-revert.sh execute "${{ github.sha }}" "$mode"
+
+      - name: Auto-revert needs-human (SH-028 blocklist short-circuit)
+        if: |
+          failure()
+          && steps.patch.conclusion == 'failure'
+          && steps.autorevert_decide.outputs.decision == 'SKIP:touches-blocklist'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          scripts/shepherd-poc/open-needs-human.sh \
+            "auto-revert-blocklisted" 0 \
+            "ci-patch failed on ${{ github.sha }} but the revert would touch a blocklisted path — refusing to open the revert PR."
