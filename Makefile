@@ -124,8 +124,11 @@ CI_STEPS_FILE     ?= build/ci-steps.jsonl
 # "lint" = the fast-gate bundle; aggregates yaml + md + memory + traceability.
 lint: yaml-lint md-lint verify-memory-size verify-traceability
 
-# Contract agent-entry points — identity aliases to shepherd's fast natives.
-test-affected: test-acceptance
+# Contract agent-entry points. test-affected is diff-aware via SH-036;
+# smoke + release-artifacts stay as identity aliases (shepherd has no
+# separate smoke tier; build is the artifact).
+test-affected: build
+	@sh scripts/test-affected.sh
 smoke: test-acceptance
 release-artifacts: build
 
