@@ -32,6 +32,9 @@ name: reusable-shepherd
 permissions:
   contents: write
   pull-requests: write
+  # needs-human escalation when regen-lockfile can't salvage an agent diff
+  # (requires `gh issue create` / `gh issue comment`).
+  issues: write
 
 jobs:
   shepherd-agent:
@@ -112,6 +115,13 @@ jobs:
 
       - name: Regenerate lockfile (deterministic — replaces DIFF_PATH)
         if: steps.agent.outputs.rc == '0'
+        # GH_TOKEN + REPO are only needed when regen-lockfile escalates to a
+        # needs-human issue (apply-all-modes-failed path). Passing them
+        # unconditionally keeps the happy path identical and the failure
+        # path noisy-but-recoverable.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: ./_shepherd/scripts/shepherd-poc/regen-lockfile.sh
 
       - name: Validate combined diff (manifest + regenerated lockfile)

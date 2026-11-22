@@ -31,14 +31,24 @@ EXTRA=${4:-}
 : "${REPO:?REPO must be set (owner/repo)}"
 command -v gh >/dev/null || { echo "gh CLI missing" >&2; exit 4; }
 
-title="[shepherd] gate $GATE on PR #$PR_NUMBER"
+# Pre-PR escalations (e.g. agent diff malformed before open-pr.sh ran) set
+# PR_NUMBER=0; the title + dedupe key swap to a PR-less form for that case.
+if [ "$PR_NUMBER" = "0" ]; then
+  title="[shepherd] $GATE (pre-PR)"
+  pr_line="**PR:** _(none — failure happened before open-pr.sh)_"
+  dedupe_key="$GATE@pre-pr"
+else
+  title="[shepherd] gate $GATE on PR #$PR_NUMBER"
+  pr_line="**PR:** #$PR_NUMBER"
+  dedupe_key="$GATE@$PR_NUMBER"
+fi
 body="**Gate:** \`$GATE\`
-**PR:** #$PR_NUMBER
+$pr_line
 **Reason:** $REASON
 
-See the [shepherd gates workflow run](https://github.com/$REPO/actions) for the full log.
+See the [shepherd workflow runs](https://github.com/$REPO/actions) for the full log.
 
-Dedupe key: \`$GATE@$PR_NUMBER\`."
+Dedupe key: \`$dedupe_key\`."
 
 if [ -n "$EXTRA" ] && [ -s "$EXTRA" ]; then
   body="$body
