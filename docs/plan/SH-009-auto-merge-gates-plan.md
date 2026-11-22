@@ -31,7 +31,7 @@ status: in-progress
 - `templates/shepherd.yml` — schema v1 fields (schema_version, monitored_pipelines, max_diff_lines, rescan_scope, dry_run, needs_human_label). Existing `auto_merge` block kept; just formalised.
 - `scripts/shepherd-poc/validate.sh` — refactored to source and use `gate-diff-size.sh`'s function. Exit-code semantics unchanged (0/2/3).
 - `scripts/shepherd-poc/open-pr.sh` — add `--label shepherd-agent` always; add `--label shepherd-security-fix` when `FINDINGS_PATH` contains at least one HIGH/CRITICAL (capture via a small `jq` before the `gh pr create` call).
-- `docs/CAPABILITIES.md` — new CAPs + flipped CAPs (part 1 set only).
+- `docs/specs/CAPABILITIES.md` — new CAPs + flipped CAPs (part 1 set only).
 - `CHANGELOG.md` + `VERSION` — v0.5.0-rc2 → v0.6.0-rc1.
 
 ### Deferred to Part 2

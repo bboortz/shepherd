@@ -9,7 +9,7 @@ owner: @benni
 
 # SH-004 — Release 0 POC on `bboortz/healthy`
 
-> **Where this lives:** the design, CAPs and acceptance for R0 live here; the implementation artefacts (workflow, scripts, prompt-injection fixture) land in `bboortz/healthy`, tracked by `HC-008` on the healthy side. See [`docs/DESIGN.md §13 Release 0`](../DESIGN.md).
+> **Where this lives:** the design, CAPs and acceptance for R0 live here; the implementation artefacts (workflow, scripts, prompt-injection fixture) land in `bboortz/healthy`, tracked by `HC-008` on the healthy side. See [`docs/specs/DESIGN.md §13 Release 0`](../specs/DESIGN.md).
 
 ## 1. Who is the consumer?
 

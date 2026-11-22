@@ -9,7 +9,7 @@ owner: @benni
 
 # SH-005 — Prompt-injection drill: automated simulation, verification, and blocking
 
-> **Why this is its own story and not folded into R1:** R0 proved the agent-produced-diff pipeline works on real CVEs. The one R0 exit criterion we didn't live-test is the prompt-injection drill (`docs/DESIGN.md §13 Release 0 Exit criteria`). It gets a dedicated story because it's security-critical and because the harness we build here becomes a reusable fixture library for every future release — not a one-off R0 clean-up.
+> **Why this is its own story and not folded into R1:** R0 proved the agent-produced-diff pipeline works on real CVEs. The one R0 exit criterion we didn't live-test is the prompt-injection drill (`docs/specs/DESIGN.md §13 Release 0 Exit criteria`). It gets a dedicated story because it's security-critical and because the harness we build here becomes a reusable fixture library for every future release — not a one-off R0 clean-up.
 
 ## 1. Who is the consumer?
 
@@ -37,7 +37,7 @@ Mechanically checkable:
 ## 4. How urgent?
 
 - [x] Security-critical (if an injection bypasses the blocklist, every managed repo is compromised).
-- [x] R0 exit-criterion closer (`docs/DESIGN.md §13 Release 0 Exit criteria` — the one row still marked ⚠️ in `docs/plan/SH-004-r0-poc-on-healthy-plan.md`).
+- [x] R0 exit-criterion closer (`docs/specs/DESIGN.md §13 Release 0 Exit criteria` — the one row still marked ⚠️ in `docs/plan/SH-004-r0-poc-on-healthy-plan.md`).
 - [x] R1 blocker (R1's reusable Action must not ship without this suite passing in CI).
 
 ## 5. Happy path

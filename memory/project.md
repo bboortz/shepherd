@@ -4,11 +4,11 @@
 
 Shepherd is a fleet bot that keeps registered repos patched, verified and healthy. It auto-opens PRs for dependency bumps and security fixes, verifies them against each repo's own build/test, and escalates to a human issue when it can't. The novel piece is the **smart-fix agent**: a sandboxed Claude run that produces a diff a trusted step then commits.
 
-Full design: [`docs/DESIGN.md`](../docs/DESIGN.md). Public pitch: [`README.md`](../README.md).
+Full design: [`docs/specs/DESIGN.md`](../docs/specs/DESIGN.md). Public pitch: [`README.md`](../README.md).
 
 ## Trust-boundary invariants (do not violate casually)
 
-From `docs/DESIGN.md §12`:
+From `docs/specs/DESIGN.md §12`:
 
 1. **Auto-merge is per-repo, off by default.** Without an explicit opt-in in `.shepherd.yml`, the bot only opens PRs.
 2. **Agent runs with no network and no secrets of its own.** It reads the checkout, produces a diff. The Claude API is reached only through one locked gateway.
@@ -19,14 +19,14 @@ From `docs/DESIGN.md §12`:
 7. **Gates before auto-merge.** Required pipelines green, diff ≤ 50 lines, 24h waiting period from release date, scan not worse (default: HIGH+CRITICAL).
 8. **No third-party GitHub Actions in shepherd's critical path (SH-001).** Exceptions: `actions/*` (GitHub-native), SHA-pinned only. Dependency bumps go through `shepherd-bump` (first-party Zig binary), not Renovate or Dependabot.
 
-## Release trajectory (from `docs/DESIGN.md §13`)
+## Release trajectory (from `docs/specs/DESIGN.md §13`)
 
 - **R0 POC** — single workflow in `bboortz/healthy`. Sandboxed agent produces 3 real PRs + one prompt-injection test passes. Not in this repo yet.
 - **R1 MVP 1** — reusable GitHub Action in `bboortz/shepherd` with gates, budgets, needs-human issues. 3 of your own repos run it for 2 weeks.
 - **R2 MVP 2** — README, demo, security docs, scope levels 1–3, 5 friendly outside testers.
 - **R3 1.0-rc1 → public launch mid-January** — goal is 100 stars + 20 feedback issues within three months.
 
-The fleet layout in `docs/DESIGN.md §2` (discover.yml, central bot, GitHub App) is **superseded** for the first public version. It stays scaffolded here so the shape is obvious, but it doesn't activate until after Release 3.
+The fleet layout in `docs/specs/DESIGN.md §2` (discover.yml, central bot, GitHub App) is **superseded** for the first public version. It stays scaffolded here so the shape is obvious, but it doesn't activate until after Release 3.
 
 ## Fleet registry
 

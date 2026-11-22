@@ -30,9 +30,9 @@ Mechanically checkable outcomes:
 - `.github/workflows/bump.yml` exists and schedules shepherd-bump on cron + `workflow_dispatch`.
 - A Zig source tree exists in-repo (single file `bump.zig` to start; split only if an invariant forces it) that builds to `bin/shepherd-bump` via `make build`.
 - `./bin/shepherd-bump --ecosystem gh-actions` reads `.github/workflows/*.yml` and `.github/actions/**/action.yml`, discovers each `uses: owner/repo@<sha>` line, resolves the latest commit SHA within the pinned major, and opens one PR per bumpable dep.
-- `docs/DESIGN.md §4` is retitled from "Shared Renovate preset" to "Bump engine (shepherd-bump)".
-- `docs/DESIGN.md §7` is retitled from "Renovate workflow" to "Bump workflow".
-- `docs/DESIGN.md §12` lists a new invariant: *No third-party GitHub Actions in shepherd's critical path (exceptions: `actions/*`, SHA-pinned only).*
+- `docs/specs/DESIGN.md §4` is retitled from "Shared Renovate preset" to "Bump engine (shepherd-bump)".
+- `docs/specs/DESIGN.md §7` is retitled from "Renovate workflow" to "Bump workflow".
+- `docs/specs/DESIGN.md §12` lists a new invariant: *No third-party GitHub Actions in shepherd's critical path (exceptions: `actions/*`, SHA-pinned only).*
 
 ## 4. How urgent?
 
@@ -132,7 +132,7 @@ Deferred to SH-002 / SH-003:
 - `bump.gh-actions` (upstream resolution half).
 - `bump.stay-within-major`, `bump.open-pr-grouped`, `bump.orphaned-pin-detection`.
 
-New CAP ids are added to `docs/CAPABILITIES.md` in the same PR. Every CAP will need a bidirectional link to its acceptance test once the harness lands.
+New CAP ids are added to `docs/specs/CAPABILITIES.md` in the same PR. Every CAP will need a bidirectional link to its acceptance test once the harness lands.
 
 ---
 

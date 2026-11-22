@@ -10,7 +10,7 @@ parent: SH-006
 
 # SH-007 — R1-A: reusable shepherd Action (required `.shepherd.yml`)
 
-> **Sub-story of [SH-006](SH-006-r1-reusable-action.md).** Owns the "reusable Action" deliverable from R1 per `docs/DESIGN.md §13`. Sibling sub-stories SH-008 (sandbox perimeter), SH-009 (auto-merge gates), SH-010 (waiting-period) layer on top. This story also carries the **required-`.shepherd.yml` decision** (2026-11-21, from user) that flips DESIGN §13 R1 scope and the onboarding principles.
+> **Sub-story of [SH-006](SH-006-r1-reusable-action.md).** Owns the "reusable Action" deliverable from R1 per `docs/specs/DESIGN.md §13`. Sibling sub-stories SH-008 (sandbox perimeter), SH-009 (auto-merge gates), SH-010 (waiting-period) layer on top. This story also carries the **required-`.shepherd.yml` decision** (2026-11-21, from user) that flips DESIGN §13 R1 scope and the onboarding principles.
 
 ## 1. Who is the consumer?
 
@@ -37,7 +37,7 @@ Mechanically checkable:
 - `templates/caller-shepherd.yml` exists, is ≤ 20 lines, references the reusable workflow by **SHA-pinned** ref, requests `secrets: inherit`.
 - `bboortz/healthy` (the SH-007 canary) has its `.github/workflows/shepherd-poc.yml` replaced by the thin caller **and** `scripts/shepherd-poc/` deleted (the whole point of the migration: pilots no longer carry the scripts).
 - `test/acceptance/test_SH_007_reusable.sh` passes: shape assertions on the reusable workflow + caller template + required-yml behaviour.
-- `docs/DESIGN.md §13` R1 scope line "Optional `.shepherd.yml`" → "**Required** `.shepherd.yml`"; onboarding principle "Zero config by default" → "Required config, templated" (same ≤ 15 min target).
+- `docs/specs/DESIGN.md §13` R1 scope line "Optional `.shepherd.yml`" → "**Required** `.shepherd.yml`"; onboarding principle "Zero config by default" → "Required config, templated" (same ≤ 15 min target).
 - A tagged pre-release `v0.5.0-rc1` on shepherd.
 
 ## 4. How urgent?
@@ -139,7 +139,7 @@ Scenario: Canary migration (healthy)
   And (if there are findings) opens a PR on bboortz/healthy
 
 Scenario: DESIGN language reflects the required-yml decision
-  Given docs/DESIGN.md
+  Given docs/specs/DESIGN.md
   Then §13 R1 scope lists "Required `.shepherd.yml`" (no "Optional")
   And the onboarding principles do NOT say "Zero config by default"
   And the onboarding principles DO say the 15-min setup covers the extra yml file

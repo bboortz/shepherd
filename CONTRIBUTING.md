@@ -2,7 +2,7 @@
 
 Shepherd is a pre-1.0 personal project with a public roadmap. External PRs are welcome once it reaches Release 2 (friendly testers). Until then, please open an issue or discussion before writing code — the design is moving and we'd like to avoid wasted work.
 
-Full product design: [`docs/DESIGN.md`](docs/DESIGN.md).
+Full product design: [`docs/specs/DESIGN.md`](docs/specs/DESIGN.md).
 Internal development process: [`CLAUDE.md`](CLAUDE.md) + [`memory/workflow.md`](memory/workflow.md).
 
 ---
@@ -18,7 +18,7 @@ Per feature (SH-NNN):
 2. Branch + plan doc            feat/SH-NNN-<slug> from dev
 3. Red acceptance test          (location follows the test harness, R1+)
 4. Implementation
-5. Register capabilities        docs/CAPABILITIES.md
+5. Register capabilities        docs/specs/CAPABILITIES.md
 6. Local gates                  make check
 6a. Pre-ship audit              fill Shipping evidence table in the plan
 7. Update README (if contract changed)
@@ -37,7 +37,7 @@ Per feature (SH-NNN):
 
 ## Security
 
-Please read [`SECURITY.md`](SECURITY.md) before reporting a vulnerability. The sandboxed smart-fix agent and its budget / protected-files rules are the trust boundary (`docs/DESIGN.md §12`); any report that affects them is high priority.
+Please read [`SECURITY.md`](SECURITY.md) before reporting a vulnerability. The sandboxed smart-fix agent and its budget / protected-files rules are the trust boundary (`docs/specs/DESIGN.md §12`); any report that affects them is high priority.
 
 ## Scope reminders
 

@@ -26,7 +26,7 @@ Mechanically checkable outcomes:
 - `templates/dependabot.yml` exists as a reference baseline: `version: 2` + at least one `- package-ecosystem:` entry.
 - `templates/dependabot-automerge.yml` exists. Every `uses:` is under `actions/*` and is a 40-hex SHA. `dependabot/fetch-metadata` is never referenced (SH-001 invariant).
 - `./bin/shepherd-bump --verify-dependabot --root PATH` exit codes: `0` ok, `3` missing `.github/dependabot.yml`, `4` malformed (no `version: 2` or no `updates:` entry). `.shepherd.yml` with `dependabot: { enforce_enabled: false }` short-circuits to `0`.
-- `docs/CAPABILITIES.md` lists new Dependabot CAPs and extends `gate.diff-size`, `gate.waiting-period`, `supply-chain.no-third-party-actions-critical-path` with bidirectional links to this story's test.
+- `docs/specs/CAPABILITIES.md` lists new Dependabot CAPs and extends `gate.diff-size`, `gate.waiting-period`, `supply-chain.no-third-party-actions-critical-path` with bidirectional links to this story's test.
 - All four pilot repos (`shepherd`, `beaconry`, `healthy`, `ham-radio-compass`) carry a `.github/dependabot.yml` after rollout.
 - `ham-radio-compass` additionally carries `.github/workflows/dependabot-automerge.yml` + `.shepherd.yml` with `dependabot.auto_merge: true`.
 - At least one existing Dependabot PR on `ham-radio-compass` (PR #25 or #26) auto-merges through the new workflow after rollout.
@@ -75,7 +75,7 @@ Mechanically checkable outcomes:
 ## 7. Out of scope
 
 - `gate.scan-not-worse` for the Dependabot flow — lives in SH-009 (R1 umbrella).
-- Fleet-wide auto-install of `.github/dependabot.yml` into managed repos — fleet layer, post-R3 (per `docs/DESIGN.md §13`). This story drops the file in by hand on four pilots.
+- Fleet-wide auto-install of `.github/dependabot.yml` into managed repos — fleet layer, post-R3 (per `docs/specs/DESIGN.md §13`). This story drops the file in by hand on four pilots.
 - Ecosystems beyond npm and GitHub Actions for the release-date gate. pip/Go/Docker/Zig fall through to `age_ok=false` and need-human review. Each gets its own follow-up.
 - Needs-human issue on verify failure or gate failure. Follow-up, co-located with SH-009's gate stack.
 - macOS / Windows runners, forges other than GitHub, model providers other than Anthropic.

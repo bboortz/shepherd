@@ -1,12 +1,12 @@
 # shepherd — Claude Instructions
 
-Shepherd is a central fleet bot. It keeps registered repos patched, verified and healthy, and escalates to a human only when it must. The differentiator is the **sandboxed smart-fix agent** with hard budgets and a protected-files blocklist (`docs/DESIGN.md §12`).
+Shepherd is a central fleet bot. It keeps registered repos patched, verified and healthy, and escalates to a human only when it must. The differentiator is the **sandboxed smart-fix agent** with hard budgets and a protected-files blocklist (`docs/specs/DESIGN.md §12`).
 
-Public contract (eventually): `README.md` and files under `templates/`. Internals and rationale live under `memory/`. Full design is `docs/DESIGN.md`.
+Public contract (eventually): `README.md` and files under `templates/`. Internals and rationale live under `memory/`. Full design is `docs/specs/DESIGN.md`.
 
 @memory/project.md
 @memory/workflow.md
-@docs/DESIGN.md
+@docs/specs/DESIGN.md
 @/home/benni/.claude/RTK.md
 
 ---
@@ -15,19 +15,21 @@ Public contract (eventually): `README.md` and files under `templates/`. Internal
 
 ```
 docs/
-  DESIGN.md              — source of truth for product, trust boundary, releases
-  CAPABILITIES.md        — capability matrix; bidirectional links to tests (grows with code)
-  FLEET.md               — repos using Shepherd, per release line (opt-in registry)
-  needs-human.md         — escalation issue template
+  specs/                 — authoritative contracts (SH-012)
+    DESIGN.md            — source of truth for product, trust boundary, releases
+    CAPABILITIES.md      — capability matrix; bidirectional links to tests
+    docs-layout.md       — meta-spec for the docs/ layout itself
   stories/
     INDEX.md             — status board (grep-friendly), created when first story lands
     _template.md         — canonical story template (9 questions + Gherkin + CAPs)
     _9-questions.md      — canonical clarification set
-    SH-NNN-<slug>.md     — one file per story (pre-code: none yet)
+    SH-NNN-<slug>.md     — one file per story
   plan/
     _template.md         — plan template w/ Shipping evidence table
     IDEAS.md             — backlog of ideas not yet promoted to stories
     SH-NNN-<slug>-plan.md — one plan per in-progress / shipped story
+  FLEET.md               — repos using Shepherd (ops reference, not a spec)
+  needs-human.md         — escalation issue template (consumed by shepherd-poc)
 policy/
   default.yml            — global auto-merge rules, quiet hours, digest cadence
   repos/                 — per-repo overrides
@@ -58,7 +60,7 @@ Design-Driven, Test-Guarded Development. Every observable change traces back to 
 2. Branch `feat/SH-NNN-<slug>` from `dev` + plan doc `docs/plan/SH-NNN-<slug>-plan.md`.
 3. Red acceptance test (location TBD when test harness lands; name follows `SH_NNN_<slug>`).
 4. Implementation — smallest diff that turns the red test green.
-5. **Register capabilities** — add or extend entries in `docs/CAPABILITIES.md`; bidirectional links.
+5. **Register capabilities** — add or extend entries in `docs/specs/CAPABILITIES.md`; bidirectional links.
 6. `make check` passes locally.
 6a. **Pre-ship audit** — fill the Shipping evidence table in the plan. Three lenses: Gherkin coverage, behaviour symmetry, self-consistency. Any ⚠️/❌ blocks shipping.
 7. README updated only if the public contract changed.
@@ -68,7 +70,7 @@ Design-Driven, Test-Guarded Development. Every observable change traces back to 
 
 Full gate matrix: `memory/workflow.md`. Story process & 9 questions: `docs/stories/_9-questions.md`.
 
-Note: Shepherd has no source code yet. Early stories (SH-001+) will bring the R0 POC into `bboortz/healthy`, then land the reusable Action here from R1 onward. See `docs/DESIGN.md §13`.
+Note: Shepherd has no source code yet. Early stories (SH-001+) will bring the R0 POC into `bboortz/healthy`, then land the reusable Action here from R1 onward. See `docs/specs/DESIGN.md §13`.
 
 ---
 
@@ -85,9 +87,9 @@ Note: Shepherd has no source code yet. Early stories (SH-001+) will bring the R0
 
 ## What NOT to do
 
-- **Don't commit secrets.** The repo is public (`docs/DESIGN.md §13 Decided 2026-11-19`). No API keys, hostnames, private design decisions in-tree.
-- **Don't modify `templates/shepherd.yml` or `.github/workflows/*` without a story.** These are the files the bot itself cannot touch (protected-files rule, `docs/DESIGN.md §12`).
-- **Don't raise the agent budget caps without a story.** Defaults (`€5/day`, `€1/run`) are in `docs/DESIGN.md §12`.
-- **Don't add macOS/Windows paths.** Linux first (`docs/DESIGN.md §13`).
+- **Don't commit secrets.** The repo is public (`docs/specs/DESIGN.md §13 Decided 2026-11-19`). No API keys, hostnames, private design decisions in-tree.
+- **Don't modify `templates/shepherd.yml` or `.github/workflows/*` without a story.** These are the files the bot itself cannot touch (protected-files rule, `docs/specs/DESIGN.md §12`).
+- **Don't raise the agent budget caps without a story.** Defaults (`€5/day`, `€1/run`) are in `docs/specs/DESIGN.md §12`.
+- **Don't add macOS/Windows paths.** Linux first (`docs/specs/DESIGN.md §13`).
 - **Don't ship an observable change without an SH-NNN story + plan + CAP entry.** The traceability gate blocks this once the gates land.
-- **Don't deepen `docs/DESIGN.md` casually.** It's the source of truth — changes are their own `docs/` PR with rationale.
+- **Don't deepen `docs/specs/DESIGN.md` casually.** It's the source of truth — changes are their own `docs/` PR with rationale.

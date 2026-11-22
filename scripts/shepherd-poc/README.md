@@ -3,7 +3,7 @@
 Third pilot of the Shepherd Release 0 POC after [`bboortz/healthy HC-008`](https://github.com/bboortz/healthy/blob/main/docs/stories/HC-008-shepherd-poc.md) and [`bboortz/beaconry BC-145`](https://github.com/bboortz/beaconry/blob/main/docs/stories/BC-145-shepherd-poc.md). The picks for the first two pilots turned out to be too dependency-clean to trigger Trivy; ham-radio-compass is an Expo / React Native app with a real `package-lock.json`, so this run gives the agent-fix path real material to work with.
 
 Product design: [`bboortz/shepherd SH-004`](https://github.com/bboortz/shepherd/blob/main/docs/stories/SH-004-r0-poc-on-healthy.md)
-Trust-boundary spec: [`bboortz/shepherd docs/DESIGN.md §12`](https://github.com/bboortz/shepherd/blob/main/docs/DESIGN.md)
+Trust-boundary spec: [`bboortz/shepherd docs/specs/DESIGN.md §12`](https://github.com/bboortz/shepherd/blob/main/docs/specs/DESIGN.md)
 
 ## Files
 
