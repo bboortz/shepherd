@@ -134,10 +134,11 @@ release-artifacts: build
 define step
 	@mkdir -p $(dir $(CI_STEPS_FILE))
 	@_t0=$$(date +%s.%N); \
-	 $(2); \
+	 $(2); _rc=$$?; \
 	 _t1=$$(date +%s.%N); \
 	 _secs=$$(awk -v a="$$_t1" -v b="$$_t0" 'BEGIN{printf "%.3f", a-b}'); \
-	 printf '{"name":"%s","seconds":%s}\n' "$(1)" "$$_secs" >> $(CI_STEPS_FILE)
+	 printf '{"name":"%s","seconds":%s}\n' "$(1)" "$$_secs" >> $(CI_STEPS_FILE); \
+	 exit $$_rc
 endef
 
 ci-timing-init:

@@ -58,13 +58,20 @@ release-artifacts: build
 # -----------------------------------------------------------------------------
 
 # $(call step,NAME,RECIPE) — run RECIPE, append {name,seconds} to the steps file.
+# IMPORTANT: inner recipe's exit code must propagate. Captured as _rc before
+# the timing emission, replayed via `exit $$_rc` after. A plain `$(2);` with
+# subsequent `;`-chained commands masks the failure (make sees the final exit
+# code of the compound, which is always 0 for the timing write). This bug bit
+# shepherd ci-release-promote on 2026-11-22 (push rejected by ruleset, job
+# reported success).
 define step
 	@mkdir -p $(dir $(CI_STEPS_FILE))
 	@_t0=$$(date +%s.%N); \
-	 $(2); \
+	 $(2); _rc=$$?; \
 	 _t1=$$(date +%s.%N); \
 	 _secs=$$(awk -v a="$$_t1" -v b="$$_t0" 'BEGIN{printf "%.3f", a-b}'); \
-	 printf '{"name":"%s","seconds":%s}\n' "$(1)" "$$_secs" >> $(CI_STEPS_FILE)
+	 printf '{"name":"%s","seconds":%s}\n' "$(1)" "$$_secs" >> $(CI_STEPS_FILE); \
+	 exit $$_rc
 endef
 
 ci-timing-init:
