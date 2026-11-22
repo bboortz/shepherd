@@ -24,7 +24,7 @@ owner: @benni
 
 Mechanically checkable:
 
-- `docs/plan/SH-018-hrc-migration-investigation-plan.md` ships with an appendix: "HRC audit" (one row per missing / nonconforming contract target).
+- The plan doc for this story (cut under `docs/plan/` when the story moves `draft → ready`) ships with an appendix: "HRC audit" — one row per missing / nonconforming contract target.
 - A sequence of PRs lands on HRC (one per gap), each linked from the plan doc.
 - HRC's row in `docs/FLEET.md` gets a `contract-adopted: <PR link>` cell OR a `contract-gap: <reason>` cell with an accompanying IDEAS entry.
 - `shepherd-bump --verify-contract` (SH-017) passes on HRC — or the plan documents a configured opt-out for a measured, justified gap.

@@ -29,7 +29,7 @@ The umbrella itself ships specs + templates + stubs, no executable code. The ele
   - §13 new "Decided on 2026-11-22" block records the umbrella decision + templates extension.
 - **CAPABILITIES.md (`docs/specs/CAPABILITIES.md`):**
   - New section "Dev cycle (SH-014 umbrella)" with six CAP rows. All `status: design` for now; Test cell populated with the planned test path for each.
-- **Story stubs (`docs/stories/SH-015..SH-025.md`):**
+- **Story stubs (`docs/stories/SH-015 through SH-025.md`):**
   - Each `status: draft`, §1–3 filled, §4 urgency ticked, §7 links to this umbrella. §5/6/8/9 marked `TBD — filled when picked up`.
 - **Index + ideas:**
   - `docs/stories/INDEX.md` gets twelve new rows (SH-014 + eleven sub-stories).
@@ -101,7 +101,7 @@ Revised sequence:
 
 ## Revision log
 
-- **2026-11-22 (initial draft)** — 6 targets, 11 sub-stories (SH-015..SH-025), rollout ordered by SH-NNN numerical sequence.
+- **2026-11-22 (initial draft)** — 6 targets, 11 sub-stories (SH-015 through SH-025), rollout ordered by SH-NNN numerical sequence.
 - **2026-11-22 (post-review revision)** — grown to 8 targets + build-once-promote wiring + 14 sub-stories (adds SH-026 baseline, SH-027 risk-paths, SH-028 auto-revert) + rollout reordered (SH-019 first). Driven by review against the two source docs that caught: no `test-affected`/`smoke`/`release-artifacts` in contract; no artifact passing between tiers; rollout inversion; missing risk-paths and auto-revert concepts; baselines deferred past the speed-up stories.
 
 ## Shipping evidence (fill at step 6a)

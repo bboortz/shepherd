@@ -24,7 +24,7 @@ owner: @benni
 
 Mechanically checkable:
 
-- `docs/plan/SH-019-fleet-contract-rollout-plan.md` has a table with one row per non-HRC fleet repo (healthy, beaconry, homelab, kernel-test, forge) — each row carries the PR link that added the contract targets + the date it merged.
+- The plan doc for this story (cut under `docs/plan/` when the story moves `draft → ready`) has a table with one row per non-HRC fleet repo (healthy, beaconry, homelab, kernel-test, forge) — each row carries the PR link that added the contract targets + the date it merged.
 - Each of the five managed repos exposes `make ci-branch` / `ci-patch` / `ci-release` / `ci-nightly` + (if missing) the aliased `build` / `test` the dev-cycle doc identified (Forge `test`, Beaconry `build`, Kernel-Test `build`+`test`, Homelab `build`).
 - `docs/FLEET.md` — new "contract adoption" column OR extended description for each row with the PR link.
 - `shepherd-bump --verify-contract` passes on all five repos (gated by SH-017 shipping first).
