@@ -1,7 +1,7 @@
 ---
 id: SH-018
 slug: hrc-migration-investigation
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
