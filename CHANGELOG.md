@@ -6,7 +6,41 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story.
+Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-030 (fleet SHA-pin sweep), SH-033 (fleet pre-push convergence).
+
+## [v0.8.0-rc1] — 2026-11-22 — SH-014 dev-cycle contract end-to-end + governance tier
+
+**SH-014 umbrella is feature-complete. 7 of 7 fleet repos expose the dev-cycle contract (9 Makefile targets, tier budgets, build-once-promote, needs-human timing-regression digest).** Two governance pieces land on the §12 trust boundary: risk-paths gate (human-approval tier distinct from blocklist) and opt-in auto-revert on ci-patch failure. HRC joins the contract. First cross-fleet consistency audit publishes.
+
+### Added
+
+- `scripts/shepherd-poc/gate-risk-paths.sh` + `gate.risk-paths-requires-approval` step in `reusable-shepherd-gates.yml` (SH-027). `.shepherd.yml → risk_paths: [glob, ...]` names agent-writable paths that still require a human approval before auto-merge. Distinct from §12 `blocklist.protected-files` (which bars writes outright).
+- `scripts/shepherd-poc/auto-revert.sh` + three new steps in `.github/workflows/ci-patch.yml` (SH-028). On post-merge `ci-patch` failure, opt-in behaviour (`.shepherd.yml → auto_revert.enabled`) opens a revert PR from a `shepherd-revert/<sha>` branch; merge-commit aware (`git revert -m 1` when parents ≥ 2). §12 blocklist short-circuits the revert to needs-human.
+- HRC Makefile with 9 contract targets aliasing `npm run check` (SH-018). `shepherd-bump --verify-contract --root ham-radio-compass` → `verify-contract: ok (9/9 contract targets present)`.
+- `docs/specs/fleet-consistency-audit-2026-11-22.md` — first cross-fleet consistency audit. 42 ✅ / 17 ⚠️ / 18 ❌ across 7 repos × 11 checks. Promoted 3 follow-up stories: SH-030 (SHA-pin sweep), SH-032 (HRC default-branch flip, shipped same day), SH-033 (fleet pre-push convergence).
+- `.shepherd.yml` schema v1 extended: `risk_paths: []` (SH-027), `auto_revert.enabled: false, auto_revert.comment_only: true` (SH-028).
+
+### Changed
+
+- HRC default branch flipped `main` → `dev` (SH-032). Fleet is now **7/7 on `dev`**. `test_SH_029_fleet_defaults.sh` 8/8 green (was 7/7 + 1 skip).
+- CAP `dev-cycle.fleet.uniformity` design → active (SH-018 closes HRC's row; 6/6 fleet contract-adopted become 7/7).
+- CAP `dev-cycle.fleet.branching-convergence` row refreshed: 6/6 → 7/7 (post-SH-032).
+- CAP `risk-paths.human-approval-required` design → active with 12 assertions + 8 scenario test suite.
+- CAP `auto-revert.patch-tier` design → active with 16 assertions + 11 scenario test suite.
+
+### Guardrails / trust boundary (§12)
+
+- Auto-revert path respects blocklist: cannot touch `.github/workflows/**`, `.shepherd.yml`, `templates/**`, `scripts/shepherd-poc/**`, `VERSION`, secrets patterns. If the failing commit touches any, the auto-revert refuses and opens needs-human instead.
+- Risk-paths gate is opt-in only; absent `risk_paths:` config is a no-op.
+- Auto-revert is opt-in only; absent `auto_revert:` config is a no-op (all 7 fleet repos stay at the default — `auto_revert.enabled: false`).
+
+### Why
+
+The SH-014 umbrella (2026-11-22 research briefs) targeted one-pipeline-model fleet uniformity. R0/R1 landed the mechanical contract (Makefile shape, budgets, artifact promotion); this release lands the governance tier on top (risk-paths + auto-revert) and completes the fleet rollout (HRC Makefile + branch flip). The audit publishes the state of play so SH-030/SH-033 can close the two remaining drift axes (SHA-pinning + pre-push hooks).
+
+### Not breaking
+
+Risk-paths and auto-revert are both opt-in behind explicit `.shepherd.yml` fields. Repos that don't bump their `.shepherd.yml` see no behaviour change. HRC's branch flip is a GitHub-settings change; open PRs preserve their `main` base.
 
 ## [v0.7.1-rc1] — 2026-11-21 — configurable base branch for integration-branch repos
 
