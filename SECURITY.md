@@ -2,7 +2,7 @@
 
 Shepherd is a bot that opens pull requests, merges some of them automatically, and runs an AI agent against your code. Its trust boundary is the whole product. We take security reports seriously.
 
-Full trust-boundary design: [`docs/DESIGN.md §12`](docs/DESIGN.md).
+Full trust-boundary design: [`docs/specs/DESIGN.md §12`](docs/specs/DESIGN.md).
 
 ## What counts as a security issue
 

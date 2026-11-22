@@ -72,12 +72,12 @@ merge_commits: ["shepherd #9 (v0.5.0-rc1)", "healthy #18 (canary migration)"]
 
 ### Modified files
 
-- `docs/DESIGN.md §13` — two edits:
+- `docs/specs/DESIGN.md §13` — two edits:
   - R1 scope line: "Optional `.shepherd.yml` with per-repo overrides" → "**Required** `.shepherd.yml` with per-repo overrides".
   - Onboarding principles: "Zero config by default" line removed; "copy one workflow file, add one secret, push" → "copy one workflow file **+ `.shepherd.yml`**, add one secret, push". Add a new principle: "Required config, templated — `.shepherd.yml` is mandatory in each managed repo; `templates/shepherd.yml` is the copyable baseline."
   - A "2026-11-21" dated decision entry naming the required-yml flip and its rationale.
 
-- `docs/CAPABILITIES.md`:
+- `docs/specs/CAPABILITIES.md`:
   - New `r1.reusable-action` CAP under a new "R1 — Reusable Action (SH-007)" section.
   - `onboarding.one-workflow`: status `aspirational → active`, test-linked.
   - `onboarding.default-github-token`: status `aspirational → active`, test-linked.
@@ -158,7 +158,7 @@ README is not updated (public contract hasn't launched yet; SH-004/011 docs stil
 | Check | Status |
 |---|---|
 | Story obeys §7 (no sandbox, no gates, no beaconry/HRC migration) | TBD |
-| New CAPs listed in §9 all appear in `docs/CAPABILITIES.md` | TBD |
+| New CAPs listed in §9 all appear in `docs/specs/CAPABILITIES.md` | TBD |
 | Protected-files invariant intact | TBD |
 | SHA-pinning everywhere in both templates (SH-001 invariant) | TBD |
 | `make injection-drill` still green (no regression in SH-005) | TBD |

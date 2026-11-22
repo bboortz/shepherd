@@ -37,7 +37,7 @@ break. Any change to the protected-files list needs a human-reviewed approval
 
 - [ ] README updated (if public contract moved)
 - [ ] `memory/project.md` invariants updated (if an invariant shifted)
-- [ ] `docs/DESIGN.md` reconciled (if a §12 trust-boundary decision changed)
+- [ ] `docs/specs/DESIGN.md` reconciled (if a §12 trust-boundary decision changed)
 - [ ] Downstream notice sent to users of the Action (only if gate defaults moved)
 
 ## Shipping evidence (fill at step 6a)
@@ -61,7 +61,7 @@ Three lenses. Any ⚠️/❌ row blocks shipping — cycle back to step 4.
 | Check | Status |
 |---|---|
 | Story obeys its own §7 (out-of-scope) — no scope creep | ✅ / ⚠️ / ❌ |
-| New CAPs listed in §9 all appear in `docs/CAPABILITIES.md` | ✅ / ⚠️ / ❌ |
+| New CAPs listed in §9 all appear in `docs/specs/CAPABILITIES.md` | ✅ / ⚠️ / ❌ |
 | Protected-files invariant intact (DESIGN §12) | ✅ / ⚠️ / ❌ |
 | Budget caps unchanged, or escalated to a human-reviewed change | ✅ / ⚠️ / ❌ / n/a |
 | `make verify-traceability` green | ✅ / ⚠️ / ❌ |

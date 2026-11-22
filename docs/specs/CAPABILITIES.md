@@ -1,6 +1,6 @@
 # Capabilities — shepherd
 
-The source of truth for what Shepherd does. Every capability is a mechanical property we can test. Entries are seeded from `docs/DESIGN.md §12`; they become test-linked once the Action lands in Release 1.
+The source of truth for what Shepherd does. Every capability is a mechanical property we can test. Entries are seeded from `docs/specs/DESIGN.md §12`; they become test-linked once the Action lands in Release 1.
 
 Each row: a stable `cap.id`, a one-line description, the source paragraph in DESIGN.md, and — once tests exist — a bidirectional pointer to the acceptance test that proves it. `make verify-traceability` will enforce bidirectional links from R1 onward.
 
@@ -153,3 +153,11 @@ The agent emits a structured intent alongside its diff so downstream gates can v
 | `onboarding.default-github-token` | **See "R1 — Reusable Action (SH-007)" section** — flipped to `active` 2026-11-21. | §13 (SH-007) | active | see SH-007 section above |
 | `onboarding.zero-config-default` | ~~`.shepherd.yml` is optional; defaults are the ones in `templates/shepherd.yml`.~~ **Deprecated 2026-11-21 (SH-007).** Replaced by `config.required-per-repo` — `.shepherd.yml` is now mandatory. | §13 (SH-007) | deprecated | — |
 | `onboarding.dry-run-first` | `.shepherd.yml` → `dry_run: true` makes `open-pr.sh` skip the PR-opening step and emit a `::notice::` summary of what would have been fixed. Operators flip on for a new repo's first-ever cycle; flip to `false` once verified. | §13 (SH-009 part 2) | active | `scripts/shepherd-poc/open-pr.sh` (dry-run early-exit block) + `test/acceptance/test_SH_009_gates.sh` (asserts `dry_run` wiring) |
+
+## Docs layout (SH-012)
+
+| CAP | Description | Source | Status | Test |
+|---|---|---|---|---|
+| `docs.layout.three-dirs` | `docs/` has three SH-NNN-shaped subdirectories: `specs/` (authoritative contracts), `plan/` (one plan per story), `stories/` (one story per observable change). Ops references (`FLEET.md`, `needs-human.md`) live at the `docs/` root, not under `specs/`. | SH-012 + `docs/specs/docs-layout.md` | active | `test/acceptance/test_SH_012_docs_layout.sh` |
+| `docs.specs.authoritative-contracts` | The authoritative product + capability contracts (`DESIGN.md`, `CAPABILITIES.md`) live under `docs/specs/` and nowhere else. Future topical specs (trust-boundary, bump-engine, sandbox) and component specs (one per enforcement script) follow the same location rule. | SH-012 + `docs/specs/docs-layout.md` | active | `test/acceptance/test_SH_012_docs_layout.sh` |
+| `docs.references.stable` | Every live reference (markdown, shell, YAML, Makefile) from a tracked non-CHANGELOG file to a `docs/` path must resolve to a real file or directory. Enforced across the whole repo by `make verify-traceability`. CHANGELOG is excluded because it is a historical record. | SH-012 + `docs/specs/docs-layout.md` | active | `test/acceptance/test_SH_012_docs_layout.sh` (`references:` scenario) |

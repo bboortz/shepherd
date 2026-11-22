@@ -25,7 +25,7 @@ Per feature (SH-NNN):
                             Top-of-file `Covers:` block names CAPs.
                             Must fail before implementation.
 4. Implementation           Smallest change that turns the red test green.
-5. Register capabilities    docs/CAPABILITIES.md — add or extend entries;
+5. Register capabilities    docs/specs/CAPABILITIES.md — add or extend entries;
                             bidirectional links (CAP → test, test Covers: → CAP).
 6. Gates                    make check (see matrix below).
 6a. Pre-ship audit          Fill Shipping evidence table in the plan.
@@ -66,7 +66,7 @@ Lifecycle: `draft → ready → in-progress → shipped` (frontmatter + INDEX).
 
 ## Capability matrix
 
-`docs/CAPABILITIES.md` is the source of truth for what Shepherd does, with bidirectional links to the acceptance tests. Seed entries are the trust-boundary mechanisms from `docs/DESIGN.md §12`. Once code lands, every CAP needs ≥1 test pointer; every acceptance test's `Covers:` block names only known CAPs; every `ready+` story has at least one CAP in question 9.
+`docs/specs/CAPABILITIES.md` is the source of truth for what Shepherd does, with bidirectional links to the acceptance tests. Seed entries are the trust-boundary mechanisms from `docs/specs/DESIGN.md §12`. Once code lands, every CAP needs ≥1 test pointer; every acceptance test's `Covers:` block names only known CAPs; every `ready+` story has at least one CAP in question 9.
 
 ## Blocking gates (from R1 onward)
 

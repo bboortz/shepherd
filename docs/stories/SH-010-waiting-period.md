@@ -38,7 +38,7 @@ Mechanically checkable:
 - `scripts/shepherd-poc/validate.sh` — permit `.shepherd-intent.json` as an expected trusted-step output (not treated as a diff-touched protected path).
 - `.github/workflows/reusable-shepherd-gates.yml` — new `gate.waiting-period` step after `scan-not-worse`. Reads `head/.shepherd-intent.json`, calls `age-of-release.sh`, compares to `gates.waiting_period_hours` from `.shepherd.yml`.
 - `templates/shepherd.yml` — schema v1 extension: `gates.waiting_period_hours: 24` (0 disables).
-- `docs/CAPABILITIES.md` — flip `gate.waiting-period` (agent flow) → active.
+- `docs/specs/CAPABILITIES.md` — flip `gate.waiting-period` (agent flow) → active.
 
 **Behaviours**
 

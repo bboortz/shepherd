@@ -35,11 +35,11 @@ Remove the Renovate scaffold from `shepherd` and replace it with a first-party Z
 
 **Files updated**
 
-- `docs/DESIGN.md §2` — layout tree loses `renovate/`, renames `renovate.yml` → `bump.yml`, adds `bump.zig` + `build.zig`.
-- `docs/DESIGN.md §4` — "Shared Renovate preset" → "Bump engine (shepherd-bump)". Short section: language, ecosystems, schedule, PR shape.
-- `docs/DESIGN.md §7` — "Renovate workflow" → "Bump workflow". Short section matching the new workflow.
-- `docs/DESIGN.md §12` — add invariant: *"No third-party GitHub Actions in shepherd's critical path. Exceptions: `actions/*` (GitHub-native), SHA-pinned only."*
-- `docs/CAPABILITIES.md` — new Supply chain + Bump engine sections (see story §9).
+- `docs/specs/DESIGN.md §2` — layout tree loses `renovate/`, renames `renovate.yml` → `bump.yml`, adds `bump.zig` + `build.zig`.
+- `docs/specs/DESIGN.md §4` — "Shared Renovate preset" → "Bump engine (shepherd-bump)". Short section: language, ecosystems, schedule, PR shape.
+- `docs/specs/DESIGN.md §7` — "Renovate workflow" → "Bump workflow". Short section matching the new workflow.
+- `docs/specs/DESIGN.md §12` — add invariant: *"No third-party GitHub Actions in shepherd's critical path. Exceptions: `actions/*` (GitHub-native), SHA-pinned only."*
+- `docs/specs/CAPABILITIES.md` — new Supply chain + Bump engine sections (see story §9).
 - `memory/project.md` — append the new invariant.
 - `README.md` — layout block loses the `renovate/` line.
 - `CHANGELOG.md` — `## [v0.1.0]` with Added / Removed / Changed.
@@ -95,7 +95,7 @@ Group policy for v1: **one PR per bump**. Grouping per ecosystem per schedule is
 ## Breaking changes
 
 - [x] **Yes** — `.github/workflows/renovate.yml` and `renovate/default.json` are removed. No external users yet, so blast radius is zero today, but the public DESIGN moves.
-- [x] **Yes** — `docs/DESIGN.md §2, §4, §7, §12` reshape. The design is public, so this is a visible change.
+- [x] **Yes** — `docs/specs/DESIGN.md §2, §4, §7, §12` reshape. The design is public, so this is a visible change.
 - [x] **Yes** — new `.github/workflows/bump.yml` requires a `SHEPHERD_BUMP_TOKEN` secret to be created on the repo before the first scheduled run. The setup checklist in DESIGN.md §11 must be updated to mention it in the same PR.
 
 README must be updated in the same PR. The PR body must call out the removal and the new secret.
@@ -104,8 +104,8 @@ README must be updated in the same PR. The PR body must call out the removal and
 
 - [ ] README updated — remove the `renovate/` line from the layout block.
 - [ ] `memory/project.md` invariants updated — add the new §12 invariant.
-- [ ] `docs/DESIGN.md` reconciled — §2, §4, §7, §11, §12 (also §13 "Risks to watch" bullet about Renovate is re-phrased).
-- [ ] `docs/CAPABILITIES.md` — new Supply chain + Bump engine sections.
+- [ ] `docs/specs/DESIGN.md` reconciled — §2, §4, §7, §11, §12 (also §13 "Risks to watch" bullet about Renovate is re-phrased).
+- [ ] `docs/specs/CAPABILITIES.md` — new Supply chain + Bump engine sections.
 - [ ] `CHANGELOG.md` entry under `[v0.1.0]` with Added / Removed / Changed sections.
 - [ ] `SHEPHERD_BUMP_TOKEN` secret created on the repo before the first scheduled run.
 - [ ] First manual `workflow_dispatch` of `bump.yml` observes zero bumps (all SHAs are fresh as of merge day).
@@ -141,7 +141,7 @@ Three lenses. Scenarios deferred to SH-002 / SH-003 are marked `deferred`; remai
 | Check | Status |
 |---|---|
 | Story obeys its own §7 (out-of-scope) — no npm/pip/Docker snuck in | ✅ |
-| CAPs delivered in §9 all appear in `docs/CAPABILITIES.md` | ✅ |
+| CAPs delivered in §9 all appear in `docs/specs/CAPABILITIES.md` | ✅ |
 | Protected-files invariant intact (DESIGN §12) | ✅ |
 | Budget caps unchanged | n/a |
 | `make test-acceptance` green | ✅ (21/21) |

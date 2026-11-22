@@ -2,7 +2,7 @@
 
 The list of repositories using Shepherd and the release line they track. Opt-in: a repo joins by (a) being listed here **and** (b) carrying the `shepherd-managed` GitHub topic.
 
-This file is the fleet registry until the fleet layer activates after Release 3. At that point discovery moves to topic search (`docs/DESIGN.md §2`, `§6`) and `FLEET.md` becomes the human-readable mirror of the topic.
+This file is the fleet registry until the fleet layer activates after Release 3. At that point discovery moves to topic search (`docs/specs/DESIGN.md §2`, `§6`) and `FLEET.md` becomes the human-readable mirror of the topic.
 
 ## Active
 

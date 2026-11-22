@@ -100,7 +100,7 @@ assert_rc 0 "$VERIFY" "$tmp/ok"
 # Live-canary; recorded in the plan's post-merge notes once dispatch runs.
 
 # ----- Scenario 6 — DESIGN reflects required-yml decision ------------------
-DESIGN="docs/DESIGN.md"
+DESIGN="docs/specs/DESIGN.md"
 # Required-yml language present
 assert_contains "$DESIGN" "Required \`.shepherd.yml\`"
 # Old "Optional .shepherd.yml with per-repo overrides" line removed

@@ -38,4 +38,4 @@
 
 9. **What capabilities does this story deliver or extend?**
    Name new CAP ids; link to existing ones. The capability matrix
-   (`docs/CAPABILITIES.md`) is the source of truth — update it in the same PR.
+   (`docs/specs/CAPABILITIES.md`) is the source of truth — update it in the same PR.

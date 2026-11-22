@@ -24,7 +24,7 @@ status: in-progress
 - `scripts/shepherd-poc/validate.sh` — intent file is a trusted-step output; ensure PROTECTED_RE still blocks the AGENT from writing it, but the committed file (written by open-pr.sh outside the agent diff) passes.
 - `.github/workflows/reusable-shepherd-gates.yml` — new step `gate.waiting-period` after `scan-not-worse`. Reads `head/.shepherd-intent.json`; calls `_shepherd/scripts/shepherd-poc/age-of-release.sh`; computes age; gate on `gates.waiting_period_hours`.
 - `templates/shepherd.yml` — schema v1 field `gates.waiting_period_hours: 24`.
-- `docs/CAPABILITIES.md` — `gate.waiting-period` flips to active (full).
+- `docs/specs/CAPABILITIES.md` — `gate.waiting-period` flips to active (full).
 
 ### Ecosystem support in age-of-release.sh
 

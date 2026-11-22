@@ -74,7 +74,7 @@ encodes each Scenario as one or more assertions against the Action.
 - `cap.id.name` — <one-line description; new or extended>
 - …
 
-New CAP ids go into `docs/CAPABILITIES.md` in the same PR. Every CAP needs a
+New CAP ids go into `docs/specs/CAPABILITIES.md` in the same PR. Every CAP needs a
 bidirectional link to its acceptance test (`make verify-traceability` enforces this
 from R1 onward).
 

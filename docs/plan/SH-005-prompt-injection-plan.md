@@ -36,8 +36,8 @@ Build a **replayable, offline** injection harness on `bboortz/shepherd` itself. 
 ### Modified files
 
 - `scripts/shepherd-poc/agent-call.sh` — add a `--replay <file>` flag that skips the Anthropic call and writes the fixture's `canned_agent_response` to `DIFF_PATH`. Enables the drill without API cost. Behind a flag so production runs are unchanged.
-- `docs/CAPABILITIES.md` — new `injection.*` section.
-- `docs/DESIGN.md §12` — add a one-paragraph note that the injection drill is part of the trust boundary.
+- `docs/specs/CAPABILITIES.md` — new `injection.*` section.
+- `docs/specs/DESIGN.md §12` — add a one-paragraph note that the injection drill is part of the trust boundary.
 
 ### Initial payload library (≥ 10, growable)
 
@@ -75,7 +75,7 @@ Build a **replayable, offline** injection harness on `bboortz/shepherd` itself. 
 - [ ] `.github/workflows/injection-drill.yml` green on a PR to `bboortz/shepherd/main`.
 - [ ] One live drill against `bboortz/ham-radio-compass` closes the R0 exit-criterion gap.
 - [ ] `docs/plan/SH-004-r0-poc-on-healthy-plan.md § Shipping evidence` row for the prompt-injection drill flips ⚠️ → ✅.
-- [ ] `docs/CAPABILITIES.md` gets the `injection.*` section with each fixture as an evidence pointer.
+- [ ] `docs/specs/CAPABILITIES.md` gets the `injection.*` section with each fixture as an evidence pointer.
 
 ## Shipping evidence (fill at step 6a)
 
@@ -107,7 +107,7 @@ Three lenses. Any ⚠️/❌ row blocks shipping.
 
 | Check | Status |
 |---|---|
-| New CAPs listed in §9 all appear in `docs/CAPABILITIES.md` | ✅ |
+| New CAPs listed in §9 all appear in `docs/specs/CAPABILITIES.md` | ✅ |
 | Drill doesn't need live API keys to pass the main gate (replay-first) | ✅ (`--replay` mode skips `ANTHROPIC_API_KEY` check) |
 | `make injection-drill` is idempotent (no scratch-repo residue) | ✅ (`global_invariants.sh` asserts cleanup) |
 | Added payloads use non-real attacker domains (`example.invalid` / `evil.example`) | ✅ |

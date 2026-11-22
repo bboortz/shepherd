@@ -49,7 +49,7 @@ Three mechanical surfaces added, one Zig mode added, zero existing surfaces brok
 - Exit codes slot in next to existing (0 ok, 1 I/O, 2 usage): **3 missing**, **4 malformed**.
 - `printUsage()` updated to list the new mode.
 
-**CAPs (`docs/CAPABILITIES.md`).** New "Dependabot path" section with the four new CAPs and bidirectional links to `test/acceptance/test_SH_011_dependabot.sh`. Status flips for `gate.diff-size` → active (narrowed test scope — now also covers the Dependabot flow); `gate.waiting-period` → active (partial: npm + gh-actions); `supply-chain.no-third-party-actions-critical-path` — test list extended.
+**CAPs (`docs/specs/CAPABILITIES.md`).** New "Dependabot path" section with the four new CAPs and bidirectional links to `test/acceptance/test_SH_011_dependabot.sh`. Status flips for `gate.diff-size` → active (narrowed test scope — now also covers the Dependabot flow); `gate.waiting-period` → active (partial: npm + gh-actions); `supply-chain.no-third-party-actions-critical-path` — test list extended.
 
 **DESIGN.md.** No deepening required; this story operates inside §12 defaults and §13 R1 umbrella. One **post-shipping** entry under §13 "Decided on 2026-11-21" naming Dependabot as the configurable baseline (no change to trust base; sits alongside `shepherd-bump`).
 
@@ -77,7 +77,7 @@ Shepherd has no users beyond the maintainer yet (per DESIGN §13 R1 soak starts 
 
 - [ ] README updated (if public contract moved) — **no change needed**; README advertises the smart-fix agent and SH-001, not `.shepherd.yml` shape yet.
 - [ ] `memory/project.md` invariants updated — **no change needed**; this story operates inside existing invariants.
-- [ ] `docs/DESIGN.md` reconciled — one post-shipping decision line under §13 (Dependabot as per-repo baseline alongside `shepherd-bump`).
+- [ ] `docs/specs/DESIGN.md` reconciled — one post-shipping decision line under §13 (Dependabot as per-repo baseline alongside `shepherd-bump`).
 - [ ] Downstream notice — not needed (no external consumers yet).
 
 **Cross-repo rollout (after merge to `main`):**
@@ -123,7 +123,7 @@ Three lenses. Any ⚠️/❌ row blocks shipping — cycle back to step 4.
 | Check | Status |
 |---|---|
 | Story obeys its own §7 (out-of-scope) — no scope creep | ✅ (no `gate.scan-not-worse`, no fleet auto-install, no non-npm/non-gh-actions ecosystem coverage) |
-| New CAPs listed in §9 all appear in `docs/CAPABILITIES.md` | ✅ (new Dependabot section + three extensions) |
+| New CAPs listed in §9 all appear in `docs/specs/CAPABILITIES.md` | ✅ (new Dependabot section + three extensions) |
 | Protected-files invariant intact (DESIGN §12) | ✅ (no changes to `.github/workflows/*.yml` in `shepherd`; managed-repo workflows are copied from `templates/`, not written by any agent) |
 | Budget caps unchanged, or escalated to a human-reviewed change | n/a |
 | `make verify-traceability` green | n/a (stub until R1) |

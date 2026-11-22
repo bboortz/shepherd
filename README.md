@@ -12,7 +12,7 @@ build.zig          Zig build script
 policy/            global rules and per-repo overrides
 templates/         files copied into managed repos
 .github/workflows/ discover, bump, digest, reusable-verify
-docs/              DESIGN, CAPABILITIES, FLEET, stories, plan, needs-human
+docs/              specs/ (DESIGN, CAPABILITIES, …), stories/, plan/, FLEET, needs-human
 memory/            persistent context for Claude sessions
 test/acceptance/   DD-TGD acceptance tests per SH-NNN story
 ```
