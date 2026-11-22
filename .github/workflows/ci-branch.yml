@@ -1,0 +1,48 @@
+---
+# Dev-cycle contract (SH-014) — tier 1: feature-branch / PR gate.
+# Budget: 5 minutes wall-clock.
+#
+# Copy this file to .github/workflows/ci-branch.yml in your managed repo.
+# It runs `make ci-branch` and uploads the per-tier timing artifact. The
+# Makefile target (templates/Makefile.contract.snippet) owns the real work.
+#
+# Spec: docs/specs/dev-cycle-contract.md
+name: ci-branch
+
+"on":
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5    # hard budget cap (SH-014). Raise only via a story.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Run branch-tier gate
+        run: make ci-branch
+
+      # Build-once-promote (SH-014): upload the artifact produced by
+      # `make release-artifacts` keyed by commit SHA. ci-patch downloads it;
+      # ci-release promotes it. Repos that don't ship an artifact (docs-only)
+      # stay compliant via if-no-files-found: ignore.
+      - name: Upload release artifacts keyed by commit SHA
+        if: always()
+        uses: actions/upload-artifact@11bd71901bbe5b1630ceea73d27ca5f4b3e71854  # v4.4.3
+        with:
+          name: release-sha-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/release/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload ci-timing.json
+        if: always()
+        uses: actions/upload-artifact@11bd71901bbe5b1630ceea73d27ca5f4b3e71854  # v4.4.3
+        with:
+          name: ci-timing-branch
+          path: build/ci-timing.json
+          if-no-files-found: ignore

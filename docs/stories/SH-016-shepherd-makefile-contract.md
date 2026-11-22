@@ -1,7 +1,7 @@
 ---
 id: SH-016
 slug: shepherd-makefile-contract
-status: draft
+status: in-progress
 created: 2026-11-22
 owner: @benni
 ---
@@ -40,11 +40,26 @@ Mechanically checkable:
 
 ## 5. Happy path
 
-_TBD — filled when picked up._
+```
+$ make ci-branch
+→ lint (yaml-lint + md-lint + verify-memory-size + verify-traceability)
+→ release-artifacts (zig build → bin/shepherd-bump)
+→ test-affected (7 acceptance test files, all pass)
+→ injection-drill (10 pass / 0 fail / 2 live-skip / 1 known-gap)
+$ cat build/ci-timing.json
+{"schema_version":1,"target":"ci-branch","budget_seconds":300,"total_seconds":2.726,
+ "steps":[{"name":"lint","seconds":0.780}, {"name":"release-artifacts","seconds":0.038},
+          {"name":"test-affected","seconds":1.465}, {"name":"injection-drill","seconds":0.443}],
+ "git_sha":"7663646","runner":"Linux-x86_64",...}
+```
+
+Measured 2026-11-22: local wall-clock 2.7 s (ReleaseSafe build cached; test-acceptance across 7 files). Within budget by a factor of 100.
 
 ## 6. Edge cases / failure modes that matter
 
-_TBD — filled when picked up. Likely: `jq` not present on the minimal runner (template assumes it)._
+- `jq` absent on the minimal runner — not used; the Makefile assembles JSON via `awk` + `printf`. No jq dependency.
+- `build/ci-steps.jsonl` empty when `make ci-branch` fails mid-step — the step macro appends synchronously; a dying step leaves a partial file. `ci-timing-finish-cmd` still assembles a valid partial JSON (whatever steps completed).
+- `GITHUB_REPOSITORY` unset locally — `ci-nightly`'s failure branch guards with `[ -n "$GITHUB_REPOSITORY" ]`; the `gh issue create` is skipped on local runs.
 
 ## 7. Out of scope
 
