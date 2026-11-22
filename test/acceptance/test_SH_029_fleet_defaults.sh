@@ -8,9 +8,8 @@
 # `gh api` live; in offline / unauthenticated environments the test skips
 # rather than fails (CI auth is inferred from GITHUB_TOKEN).
 #
-# Expected state (SH-029 target):
-#   - shepherd  + all 5 managed repos on `dev`
-#   - HRC on `main` until SH-018 investigation lands
+# Expected state (SH-029 + SH-032):
+#   - shepherd + all 6 managed repos on `dev` (HRC flipped 2026-11-22 via SH-032)
 #
 # Env knobs:
 #   SH_029_SKIP_ON_NO_AUTH=1  (default)  skip gracefully when gh isn't logged in
@@ -29,8 +28,8 @@ assert_eq() { want=$1; got=$2; label=$3
 # Fleet + expected defaults. Update when FLEET.md changes.
 # ---------------------------------------------------------------------------
 
-EXPECTED_DEV="bboortz/shepherd bboortz/beaconry bboortz/forge bboortz/healthy bb-claw/homelab bb-claw/kernel-test"
-EXPECTED_MAIN="bboortz/ham-radio-compass"   # deferred to SH-018
+EXPECTED_DEV="bboortz/shepherd bboortz/beaconry bboortz/forge bboortz/healthy bb-claw/homelab bb-claw/kernel-test bboortz/ham-radio-compass"
+EXPECTED_MAIN=""   # SH-032 flipped HRC on 2026-11-22; fleet is now 7/7 on dev
 
 # ---------------------------------------------------------------------------
 # Resolver: live via gh, or replay from fixture.
@@ -72,13 +71,14 @@ for r in $EXPECTED_DEV; do
 done
 
 # ---------------------------------------------------------------------------
-# Scenario 2 — HRC stays on main (deferred to SH-018)
+# Scenario 2 — SH-032 shipped: no repos remain on main. Kept as a loop so
+# that re-introducing an exception later only needs populating EXPECTED_MAIN.
 # ---------------------------------------------------------------------------
 
 for r in $EXPECTED_MAIN; do
   got=$(resolve_default "$r")
   [ -n "$got" ] || { fail=$((fail + 1)); echo "FAIL $r: empty response"; continue; }
-  assert_eq "main" "$got" "$r default branch (deferred to SH-018)"
+  assert_eq "main" "$got" "$r default branch"
 done
 
 # ---------------------------------------------------------------------------
