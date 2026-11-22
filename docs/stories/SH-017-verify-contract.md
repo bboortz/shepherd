@@ -1,7 +1,7 @@
 ---
 id: SH-017
 slug: verify-contract
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
