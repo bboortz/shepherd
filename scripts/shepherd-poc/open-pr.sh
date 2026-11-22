@@ -102,17 +102,27 @@ git add -A -- . ':(exclude)_shepherd'
 git commit -m "shepherd-poc: automated dependency fix ($timestamp)"
 git push -u origin "$branch"
 
+# Use the same counter the validator uses (gate-diff-size.sh) so the PR body
+# reports the actual gated number instead of `wc -l` of the whole diff file
+# (which counts headers, context, and +/- indiscriminately — and reads as
+# "185 lines of diff (cap 50)" while the validator says `pass`, which is
+# confusing on an otherwise-clean PR).
+HERE=$(dirname "$0")
+MAX_LINES="${MAX_LINES:-50}"
+non_lockfile_lines=$("$HERE/gate-diff-size.sh" "$DIFF" --non-lockfile)
+lockfile_lines=$("$HERE/gate-diff-size.sh" "$DIFF" --lockfile)
+
 body=$(cat <<EOF
 Automated PR from Shepherd R0 POC (HC-008).
 
 **Scope:** dependency / lockfile fix, level 1.
-**Agent output size:** $(wc -l < "$DIFF") lines of diff (cap 50).
+**Agent output size:** ${non_lockfile_lines} non-lockfile changed lines (cap ${MAX_LINES}); ${lockfile_lines} lockfile lines (exempt).
 **Model:** ${MODEL:-claude-sonnet-4-6} (max_tokens ${MAX_TOKENS:-4096}).
 **Sandbox gap (R0):** the agent ran on the standard runner; network isolation is R1 scope.
 
 Validator:
 - Protected-path blocklist: pass
-- Diff size ≤ 50 lines: pass
+- Diff size ≤ ${MAX_LINES} lines: pass (${non_lockfile_lines})
 - \`git apply --check\` mode: $mode
 
 Reviewer checklist:
