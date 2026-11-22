@@ -5,20 +5,23 @@
 //!   shepherd-bump --check                       Query upstream tags; print bump plan. (TODO)
 //!   shepherd-bump --pr                          Open PRs for bumpable deps. (TODO)
 //!   shepherd-bump --verify-dependabot           Verify .github/dependabot.yml presence+shape (SH-011).
+//!   shepherd-bump --verify-contract             Verify Makefile exposes the 8 SH-014 contract targets (SH-017).
 //!
 //! Flags:
 //!   --root PATH         Repo root (default: cwd).
 //!   --ecosystem NAME    Only `gh-actions` is supported (bump modes only).
 //!
 //! Exit codes: 0 ok, 1 cannot open root / I/O, 2 usage,
-//!             3 dependabot.yml missing, 4 dependabot.yml malformed.
+//!             3 dependabot.yml OR Makefile missing,
+//!             4 dependabot.yml malformed OR contract target missing.
 //!
-//! See docs/stories/SH-001-retire-renovate.md and
-//!     docs/stories/SH-011-dependabot-enforce-automerge.md for scope.
+//! See docs/stories/SH-001-retire-renovate.md,
+//!     docs/stories/SH-011-dependabot-enforce-automerge.md,
+//!     docs/stories/SH-017-verify-contract.md.
 
 const std = @import("std");
 
-const Mode = enum { list, check, pr, verify_dependabot, help };
+const Mode = enum { list, check, pr, verify_dependabot, verify_contract, help };
 
 const Options = struct {
     mode: Mode = .help,
@@ -48,6 +51,7 @@ fn printUsage() void {
         \\       shepherd-bump --check                [--root PATH] [--ecosystem gh-actions]  (TODO)
         \\       shepherd-bump --pr                   [--root PATH] [--ecosystem gh-actions]  (TODO)
         \\       shepherd-bump --verify-dependabot    [--root PATH]
+        \\       shepherd-bump --verify-contract      [--root PATH]
         \\
     ;
     std.debug.print("{s}", .{msg});
@@ -66,6 +70,8 @@ fn parseArgs(args: []const []const u8) !Options {
             opts.mode = .pr;
         } else if (std.mem.eql(u8, a, "--verify-dependabot")) {
             opts.mode = .verify_dependabot;
+        } else if (std.mem.eql(u8, a, "--verify-contract")) {
+            opts.mode = .verify_contract;
         } else if (std.mem.eql(u8, a, "--help") or std.mem.eql(u8, a, "-h")) {
             opts.mode = .help;
         } else if (std.mem.eql(u8, a, "--root")) {
@@ -347,6 +353,145 @@ fn cmdVerifyDependabot(allocator: std.mem.Allocator, io: std.Io, opts: Options) 
     return 0;
 }
 
+// --- verify-contract (SH-017) ----------------------------------------------
+//
+// Checks each managed repo's Makefile for the 8 SH-014 contract targets:
+//   build, test, test-affected, smoke, release-artifacts,
+//   ci-branch, ci-patch, ci-release, ci-nightly
+//
+// (That's 9 — `build` + `test` are the long-standing hooks from .shepherd.yml;
+// the other 7 are SH-014's additions. The CAP description says "eight
+// contract targets"; `build` + `test` + 7 tiered/entry-point targets.)
+//
+// Opt-out: `.shepherd.yml` → `contract: { enforce_enabled: false }`. The
+// check is section-aware (so a `dependabot: { enforce_enabled: false }`
+// does NOT silently opt out the contract verifier).
+
+const CONTRACT_TARGETS = [_][]const u8{
+    "build",
+    "test",
+    "test-affected",
+    "smoke",
+    "release-artifacts",
+    "ci-branch",
+    "ci-patch",
+    "ci-release",
+    "ci-nightly",
+};
+
+/// Count the leading-whitespace cells (space or tab). Used to detect YAML
+/// section boundaries (a key at indent 0 ends the previous section).
+fn leadingWsLen(line: []const u8) usize {
+    var i: usize = 0;
+    while (i < line.len and (line[i] == ' ' or line[i] == '\t')) : (i += 1) {}
+    return i;
+}
+
+/// Honours `.shepherd.yml → contract: { enforce_enabled: false }`. Walks
+/// the file, tracks whether we're inside the `contract:` section (indented
+/// child of a top-level `contract:` key), returns true if an
+/// `enforce_enabled: false` line appears inside it.
+fn isContractOptOut(contents: []const u8) bool {
+    var it = std.mem.splitScalar(u8, contents, '\n');
+    var in_contract: bool = false;
+    while (it.next()) |line| {
+        const trimmed = trimTrailingWs(line);
+        const ws = leadingWsLen(trimmed);
+        const bare = trimLeadingWs(trimmed);
+        if (bare.len == 0 or bare[0] == '#') continue; // blank or comment
+        if (ws == 0) {
+            // Top-level key: enters (or leaves) a section.
+            in_contract = std.mem.startsWith(u8, bare, "contract:");
+            continue;
+        }
+        if (in_contract) {
+            if (std.mem.startsWith(u8, bare, "enforce_enabled:")) {
+                const rest = trimLeadingWs(bare["enforce_enabled:".len..]);
+                if (std.mem.eql(u8, rest, "false")) return true;
+            }
+        }
+    }
+    return false;
+}
+
+/// Returns true if the Makefile declares `<target>:` (recipe definition)
+/// OR lists it after `.PHONY:` or `.PHONY`. Scan is permissive (not a
+/// full Make parser): a line starting with `<target>:` at indent 0 is
+/// a recipe; a `.PHONY:` line listing the target counts too.
+fn makefileHasTarget(contents: []const u8, target: []const u8) bool {
+    var it = std.mem.splitScalar(u8, contents, '\n');
+    while (it.next()) |line| {
+        const stripped = trimTrailingWs(line);
+        // Recipe definition: "<target>:" at the start of a line (no leading
+        // whitespace). Accept trailing ":" or ": <deps>...".
+        if (std.mem.startsWith(u8, stripped, target)) {
+            const rest = stripped[target.len..];
+            if (rest.len > 0 and rest[0] == ':') return true;
+        }
+        // .PHONY declaration: look for target as a whitespace-separated token
+        // after `.PHONY:` (possibly spanning multi-line with `\`).
+        if (std.mem.indexOf(u8, stripped, ".PHONY:") != null) {
+            var tok_it = std.mem.tokenizeAny(u8, stripped, " \t\\");
+            while (tok_it.next()) |tok| {
+                if (std.mem.eql(u8, tok, target)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+fn cmdVerifyContract(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
+    var root = std.Io.Dir.cwd().openDir(io, opts.root, .{}) catch |err| {
+        std.debug.print("error: cannot open root '{s}': {s}\n", .{ opts.root, @errorName(err) });
+        return 1;
+    };
+    defer root.close(io);
+
+    // --- Opt-out check via .shepherd.yml (contract section) --------------
+    if (root.readFileAlloc(io, ".shepherd.yml", allocator, .limited(64 * 1024))) |shepherd_cfg| {
+        defer allocator.free(shepherd_cfg);
+        if (isContractOptOut(shepherd_cfg)) {
+            std.debug.print("verify-contract: opted out via .shepherd.yml (contract.enforce_enabled: false)\n", .{});
+            return 0;
+        }
+    } else |err| switch (err) {
+        error.FileNotFound => {}, // no .shepherd.yml — default is enforce_enabled: true
+        else => return err,
+    }
+
+    // --- Presence check: Makefile ----------------------------------------
+    const contents = root.readFileAlloc(io, "Makefile", allocator, .limited(512 * 1024)) catch |err| switch (err) {
+        error.FileNotFound => {
+            std.debug.print("verify-contract: Makefile is missing (exit 3)\n", .{});
+            return 3;
+        },
+        else => {
+            std.debug.print("verify-contract: cannot read Makefile: {s}\n", .{@errorName(err)});
+            return 1;
+        },
+    };
+    defer allocator.free(contents);
+
+    // --- Target coverage -------------------------------------------------
+    var missing_count: usize = 0;
+    for (CONTRACT_TARGETS) |t| {
+        if (!makefileHasTarget(contents, t)) {
+            std.debug.print("verify-contract: missing target `{s}`\n", .{t});
+            missing_count += 1;
+        }
+    }
+    if (missing_count > 0) {
+        std.debug.print(
+            "verify-contract: {d} of {d} SH-014 contract target(s) missing (exit 4)\n",
+            .{ missing_count, CONTRACT_TARGETS.len },
+        );
+        return 4;
+    }
+
+    std.debug.print("verify-contract: ok ({d}/{d} contract targets present)\n", .{ CONTRACT_TARGETS.len, CONTRACT_TARGETS.len });
+    return 0;
+}
+
 fn cmdList(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
     if (!std.mem.eql(u8, opts.ecosystem, "gh-actions")) {
         std.debug.print("error: ecosystem '{s}' not supported (only 'gh-actions')\n", .{opts.ecosystem});
@@ -403,6 +548,7 @@ pub fn main(init: std.process.Init) !u8 {
         },
         .list => try cmdList(allocator, io, opts),
         .verify_dependabot => try cmdVerifyDependabot(allocator, io, opts),
+        .verify_contract => try cmdVerifyContract(allocator, io, opts),
         .check, .pr => blk: {
             std.debug.print("error: --{s} not yet implemented (SH-001 follow-up)\n", .{@tagName(opts.mode)});
             break :blk 2;
