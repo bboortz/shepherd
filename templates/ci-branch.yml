@@ -32,7 +32,7 @@ jobs:
       # stay compliant via if-no-files-found: ignore.
       - name: Upload release artifacts keyed by commit SHA
         if: always()
-        uses: actions/upload-artifact@11bd71901bbe5b1630ceea73d27ca5f4b3e71854  # v4.4.3
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: release-sha-${{ github.event.pull_request.head.sha || github.sha }}
           path: build/release/**
@@ -41,7 +41,7 @@ jobs:
 
       - name: Upload ci-timing.json
         if: always()
-        uses: actions/upload-artifact@11bd71901bbe5b1630ceea73d27ca5f4b3e71854  # v4.4.3
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: ci-timing-branch
           path: build/ci-timing.json
