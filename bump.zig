@@ -6,6 +6,7 @@
 //!   shepherd-bump --pr                          Open PRs for bumpable deps. (TODO)
 //!   shepherd-bump --verify-dependabot           Verify .github/dependabot.yml presence+shape (SH-011).
 //!   shepherd-bump --verify-contract             Verify Makefile exposes the 8 SH-014 contract targets (SH-017).
+//!   shepherd-bump --verify-sha-pin              Verify every uses: ref in .github/ is 40-hex SHA-pinned (SH-030).
 //!   shepherd-bump --verify-prepush              Verify .pre-commit-config.yaml or .husky/pre-push runs `make check` (SH-033).
 //!
 //! Flags:
@@ -14,16 +15,17 @@
 //!
 //! Exit codes: 0 ok, 1 cannot open root / I/O, 2 usage,
 //!             3 dependabot.yml OR Makefile missing OR no pre-push config file,
-//!             4 dependabot.yml malformed OR contract target missing OR pre-push doesn't call `make check`.
+//!             4 dependabot.yml malformed OR contract target missing OR unpinned uses: ref OR pre-push doesn't call `make check`.
 //!
 //! See docs/stories/SH-001-retire-renovate.md,
 //!     docs/stories/SH-011-dependabot-enforce-automerge.md,
 //!     docs/stories/SH-017-verify-contract.md,
+//!     docs/stories/SH-030-fleet-sha-pin-sweep.md,
 //!     docs/stories/SH-033-fleet-prepush-convergence.md.
 
 const std = @import("std");
 
-const Mode = enum { list, check, pr, verify_dependabot, verify_contract, verify_prepush, help };
+const Mode = enum { list, check, pr, verify_dependabot, verify_contract, verify_sha_pin, verify_prepush, help };
 
 const Options = struct {
     mode: Mode = .help,
@@ -54,6 +56,7 @@ fn printUsage() void {
         \\       shepherd-bump --pr                   [--root PATH] [--ecosystem gh-actions]  (TODO)
         \\       shepherd-bump --verify-dependabot    [--root PATH]
         \\       shepherd-bump --verify-contract      [--root PATH]
+        \\       shepherd-bump --verify-sha-pin       [--root PATH]
         \\       shepherd-bump --verify-prepush       [--root PATH]
         \\
     ;
@@ -75,6 +78,8 @@ fn parseArgs(args: []const []const u8) !Options {
             opts.mode = .verify_dependabot;
         } else if (std.mem.eql(u8, a, "--verify-contract")) {
             opts.mode = .verify_contract;
+        } else if (std.mem.eql(u8, a, "--verify-sha-pin")) {
+            opts.mode = .verify_sha_pin;
         } else if (std.mem.eql(u8, a, "--verify-prepush")) {
             opts.mode = .verify_prepush;
         } else if (std.mem.eql(u8, a, "--help") or std.mem.eql(u8, a, "-h")) {
@@ -615,6 +620,191 @@ fn cmdVerifyPrepush(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8
     return 3;
 }
 
+// ---------------------------------------------------------------------------
+// --verify-sha-pin (SH-030): scan .github/workflows/*.yml + .github/actions/
+// for any `uses:` ref whose `@<ref>` is NOT a 40-hex SHA. This is the §12
+// supply-chain invariant (CVE-2026-33634 — TeamPCP mutable-tag attack).
+// ---------------------------------------------------------------------------
+
+const UnpinnedRef = struct {
+    file: []u8,
+    line_number: usize,
+    owner_repo: []u8,  // "owner/repo"
+    ref: []u8,          // the non-40-hex ref (e.g. "v4", "main", "sha-xxxxxxx")
+
+    fn deinit(self: UnpinnedRef, allocator: std.mem.Allocator) void {
+        allocator.free(self.file);
+        allocator.free(self.owner_repo);
+        allocator.free(self.ref);
+    }
+};
+
+/// Parse a line like `uses: owner/repo@<ref>` and return an UnpinnedRef iff
+/// the ref is NOT a 40-hex SHA. Returns null for SHA-pinned refs and non-uses
+/// lines.
+fn parseUsesLineUnpinned(
+    allocator: std.mem.Allocator,
+    file_path: []const u8,
+    line_number: usize,
+    line: []const u8,
+) !?UnpinnedRef {
+    var p: usize = 0;
+    while (p < line.len and (line[p] == ' ' or line[p] == '\t')) p += 1;
+    if (p < line.len and line[p] == '-') {
+        p += 1;
+        while (p < line.len and (line[p] == ' ' or line[p] == '\t')) p += 1;
+    }
+
+    const keyword = "uses:";
+    if (p + keyword.len > line.len) return null;
+    if (!std.mem.eql(u8, line[p .. p + keyword.len], keyword)) return null;
+    p += keyword.len;
+
+    var saw_ws = false;
+    while (p < line.len and (line[p] == ' ' or line[p] == '\t')) : (p += 1) saw_ws = true;
+    if (!saw_ws) return null;
+
+    // Local-repo refs + docker:// refs: exempt.
+    if (p < line.len and line[p] == '.') return null;
+    if (p + 9 <= line.len and std.mem.eql(u8, line[p .. p + 9], "docker://")) return null;
+
+    const owner_start = p;
+    while (p < line.len and isIdentChar(line[p])) p += 1;
+    if (p == owner_start) return null;
+
+    if (p >= line.len or line[p] != '/') return null;
+    p += 1;
+
+    while (p < line.len and isIdentChar(line[p])) p += 1;
+
+    // Internal sub-path: `owner/repo/path/to/workflow.yml@ref`.
+    while (p < line.len and line[p] == '/') {
+        p += 1;
+        while (p < line.len and isIdentChar(line[p])) p += 1;
+    }
+
+    if (p >= line.len or line[p] != '@') return null;
+    const owner_repo_end = p;
+    p += 1;
+
+    const ref_start = p;
+    while (p < line.len and
+        line[p] != ' ' and line[p] != '\t' and
+        line[p] != '#' and line[p] != '\r' and line[p] != '\n') p += 1;
+    const ref = line[ref_start..p];
+    if (ref.len == 0) return null;
+    if (isHex40(ref)) return null;
+
+    return UnpinnedRef{
+        .file = try allocator.dupe(u8, file_path),
+        .line_number = line_number,
+        .owner_repo = try allocator.dupe(u8, line[owner_start..owner_repo_end]),
+        .ref = try allocator.dupe(u8, ref),
+    };
+}
+
+fn listUnpinnedInFile(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    root: std.Io.Dir,
+    rel_path: []const u8,
+    refs: *std.ArrayList(UnpinnedRef),
+) !void {
+    const contents = try root.readFileAlloc(io, rel_path, allocator, .limited(1 * 1024 * 1024));
+    defer allocator.free(contents);
+
+    var it = std.mem.splitScalar(u8, contents, '\n');
+    var line_number: usize = 0;
+    while (it.next()) |line| {
+        line_number += 1;
+        if (try parseUsesLineUnpinned(allocator, rel_path, line_number, line)) |ref| {
+            try refs.append(allocator, ref);
+        }
+    }
+}
+
+fn scanUnpinnedWorkflowsDir(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    root: std.Io.Dir,
+    refs: *std.ArrayList(UnpinnedRef),
+) !void {
+    var dir = root.openDir(io, ".github/workflows", .{ .iterate = true }) catch |err| switch (err) {
+        error.FileNotFound => return,
+        else => return err,
+    };
+    defer dir.close(io);
+
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.kind != .file) continue;
+        const name = entry.name;
+        const is_yaml = std.mem.endsWith(u8, name, ".yml") or std.mem.endsWith(u8, name, ".yaml");
+        if (!is_yaml) continue;
+        const rel = try std.fmt.allocPrint(allocator, ".github/workflows/{s}", .{name});
+        defer allocator.free(rel);
+        try listUnpinnedInFile(allocator, io, root, rel, refs);
+    }
+}
+
+fn scanUnpinnedActionsDir(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    root: std.Io.Dir,
+    refs: *std.ArrayList(UnpinnedRef),
+) !void {
+    var top = root.openDir(io, ".github/actions", .{ .iterate = true }) catch |err| switch (err) {
+        error.FileNotFound => return,
+        else => return err,
+    };
+    defer top.close(io);
+
+    var walker = try top.walk(allocator);
+    defer walker.deinit();
+
+    while (try walker.next(io)) |entry| {
+        if (entry.kind != .file) continue;
+        if (!(std.mem.eql(u8, entry.basename, "action.yml") or std.mem.eql(u8, entry.basename, "action.yaml"))) continue;
+        const rel = try std.fmt.allocPrint(allocator, ".github/actions/{s}", .{entry.path});
+        defer allocator.free(rel);
+        try listUnpinnedInFile(allocator, io, root, rel, refs);
+    }
+}
+
+fn cmdVerifyShaPin(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
+    var root = std.Io.Dir.cwd().openDir(io, opts.root, .{}) catch |err| {
+        std.debug.print("error: cannot open root '{s}': {s}\n", .{ opts.root, @errorName(err) });
+        return 1;
+    };
+    defer root.close(io);
+
+    var refs: std.ArrayList(UnpinnedRef) = .empty;
+    defer {
+        for (refs.items) |r| r.deinit(allocator);
+        refs.deinit(allocator);
+    }
+
+    try scanUnpinnedWorkflowsDir(allocator, io, root, &refs);
+    try scanUnpinnedActionsDir(allocator, io, root, &refs);
+
+    if (refs.items.len == 0) {
+        std.debug.print("verify-sha-pin: ok (all uses: refs are SHA-pinned)\n", .{});
+        return 0;
+    }
+
+    for (refs.items) |r| {
+        std.debug.print(
+            "verify-sha-pin: unpinned uses: ref {s}:{d} — {s}@{s}\n",
+            .{ r.file, r.line_number, r.owner_repo, r.ref },
+        );
+    }
+    std.debug.print(
+        "verify-sha-pin: {d} unpinned uses: ref(s) (exit 4) — supply-chain invariant §12 violated\n",
+        .{refs.items.len},
+    );
+    return 4;
+}
+
 fn cmdList(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8 {
     if (!std.mem.eql(u8, opts.ecosystem, "gh-actions")) {
         std.debug.print("error: ecosystem '{s}' not supported (only 'gh-actions')\n", .{opts.ecosystem});
@@ -672,6 +862,7 @@ pub fn main(init: std.process.Init) !u8 {
         .list => try cmdList(allocator, io, opts),
         .verify_dependabot => try cmdVerifyDependabot(allocator, io, opts),
         .verify_contract => try cmdVerifyContract(allocator, io, opts),
+        .verify_sha_pin => try cmdVerifyShaPin(allocator, io, opts),
         .verify_prepush => try cmdVerifyPrepush(allocator, io, opts),
         .check, .pr => blk: {
             std.debug.print("error: --{s} not yet implemented (SH-001 follow-up)\n", .{@tagName(opts.mode)});
