@@ -1,7 +1,7 @@
 ---
 id: SH-029
 slug: fleet-branching-convergence
-status: draft
+status: in-progress
 created: 2026-11-22
 owner: @benni
 ---
@@ -51,24 +51,42 @@ Dependency: none. Can start in parallel with the rest of SH-019. **Does NOT bloc
 
 ## 5. Happy path
 
-_TBD — filled when picked up. Rough shape:_
+Phase 1 — shepherd dogfood (this PR):
 
 ```
-# Per repo (shepherd example):
+# Ship the shared promote logic + shepherd-side wiring
+$ git switch -c feat/SH-029-branching-convergence main
+# (adds ci-release-promote to templates/Makefile.contract.snippet,
+#  updates shepherd's Makefile ci-release body to call it,
+#  wires `ref: dev` + git config into ci-release.yml workflow)
+$ make check          # green
+$ gh pr create --base main
+# → merge PR
+```
+
+Phase 2 — operator migrates shepherd (manual, post-merge):
+
+```
 $ git switch main && git pull --ff-only
 $ git switch -c dev main && git push -u origin dev
 $ gh repo edit bboortz/shepherd --default-branch dev
-$ cp .github/workflows/release.yml.template .github/workflows/release.yml
-$ gh workflow run release.yml   # smoke the FF-promotion path
+$ gh ruleset list    # inspect current main protection
+# apply dev ruleset: required checks (`ci-branch`, `drill`) + 1 PR review
+# apply main ruleset: FF-only, no PR, no direct push (except release.yml's GITHUB_TOKEN)
+$ gh workflow run ci-release.yml   # smoke the FF-promote path on a no-op dev
+# → verify main FF'd to dev + tag vX.Y.Z created
 ```
+
+Phase 3 — per-repo (one PR each): healthy, homelab, kernel-test.
 
 ## 6. Edge cases / failure modes that matter
 
-_TBD — filled when picked up. Likely:_
-
-- Existing PRs open against `main` — they need to be rebased onto `dev`.
-- Branch protection on `main` needs to be relaxed temporarily to permit the one-time FF push from `release.yml`.
-- `shepherd`-side auto-merge (SH-009) assumes PRs target `main` today; SH-017 verifier needs to know each repo's `default_branch`.
+- **Dispatching ci-release on main instead of dev**: the workflow is configured with `ref: dev` on checkout; the `make ci-release-promote` body asserts `git branch --show-current == dev` and exits 1 with an operator-readable message. Safe-by-construction.
+- **VERSION missing or malformed**: `ci-release-promote` fails fast with "VERSION file missing — cannot determine tag". Tag write + push is atomic — if any step fails, the tag is not pushed to origin.
+- **dev is not FF-ahead of main** (someone force-pushed to main): `git merge --ff-only` returns non-zero; promote aborts without side-effects. Needs operator investigation.
+- **Existing PRs targeting main at migration time**: the plan doc's Phase 2 step adds a `gh pr edit <n> --base dev` loop for in-flight PRs. Zero currently open on shepherd; loop is a no-op.
+- **Branch protection applied to main blocks FF push**: the GitHub `contents: write` permission on `GITHUB_TOKEN` plus an explicit "bypass actors" entry in main's ruleset lets `github-actions[bot]` push. If missing, the workflow fails at `git push origin main` — operator fixes ruleset and re-dispatches.
+- **ci-patch.yml double-fire on release**: triggers `push` to `[dev, main]`; ci-release pushes the same SHA to main, so ci-patch fires twice. Documented gap; narrow to `[dev]` only if it ever matters (SH-020 digest will flag budget breach).
 
 ## 7. Out of scope
 
