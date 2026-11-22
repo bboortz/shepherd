@@ -1,7 +1,7 @@
 ---
 id: SH-028
 slug: auto-revert-patch
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
