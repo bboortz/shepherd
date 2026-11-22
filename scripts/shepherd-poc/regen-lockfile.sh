@@ -22,27 +22,53 @@ fi
 command -v git >/dev/null || { echo "git missing" >&2; exit 3; }
 
 # Apply the manifest diff in the working tree (no commit yet). LLM-generated
-# diffs routinely miscount hunks and misplace context by a line or two, so
+# diffs routinely miscount hunks AND misplace the starting line number, so
 # cascade through increasingly forgiving modes:
-#   1. strict               — the base case that works on well-formed diffs
-#   2. --recount            — rebuild hunk counts from content
-#   3. --recount --ignore-whitespace
-#                           — tolerate whitespace drift inside context lines
-#   4. --recount --3way     — synthesise a 3-way merge from the index blob
+#   1. strict                              — well-formed diffs
+#   2. --recount                           — rebuild hunk counts from content
+#   3. --recount --ignore-whitespace       — whitespace drift inside context
+#   4. --recount --3way                    — synthesise a 3-way merge
 #   5. --recount --3way --ignore-whitespace
-#                           — combine 3-way with whitespace tolerance
+#   6. patch -p1 -F 3                      — Unix `patch` with fuzz, slides
+#                                            the hunk to match context when
+#                                            the LLM's starting line is off
+#                                            by a few lines
+# `-F 3` is GNU patch's default fuzz; made explicit for clarity. `patch`
+# writes the file in-place (no extra flag needed) and exits non-zero on
+# genuine content mismatch.
+#
 # The previous `-p0` mode is intentionally gone: the agent's diffs always
-# include `a/` / `b/` prefixes (the default), and `-p0` makes git treat
-# those as literal filenames, producing the misleading "b/package.json
-# does not exist in index" error on a perfectly valid diff.
+# include `a/` / `b/` prefixes, and `-p0` made git treat those as literal
+# filenames, producing a misleading "b/package.json does not exist in
+# index" error on an otherwise-valid diff.
 apply_tried() {
-  if   git apply                                             "$1" 2>"$2"; then echo "strict";                  return 0
-  elif git apply --recount                                   "$1" 2>"$2"; then echo "recount";                 return 0
-  elif git apply --recount --ignore-whitespace               "$1" 2>"$2"; then echo "recount+ignore-ws";       return 0
-  elif git apply --recount --3way                            "$1" 2>"$2"; then echo "recount+3way";            return 0
-  elif git apply --recount --3way --ignore-whitespace        "$1" 2>"$2"; then echo "recount+3way+ignore-ws";  return 0
-  else                                                                                                        return 1
+  _diff=$1
+  _log=$2
+  # Accumulate per-mode output into $_log so operators can see which modes
+  # failed and why — the previous version used `2>$_log` which overwrites
+  # on each attempt, leaving only the LAST mode's stderr. Line-offset bugs
+  # that --recount handles are then invisible when the final mode (--3way)
+  # reports the separate "lacks necessary blob" error.
+  : > "$_log"
+  _try() {
+    name=$1; shift
+    printf -- "---- mode: %s ----\n" "$name" >> "$_log"
+    if "$@" 2>>"$_log"; then
+      printf "  → %s succeeded\n" "$name" >> "$_log"
+      echo "$name"
+      return 0
+    fi
+    return 1
+  }
+  _try "strict"                   git apply                                       "$_diff" && return 0
+  _try "recount"                  git apply --recount                             "$_diff" && return 0
+  _try "recount+ignore-ws"        git apply --recount --ignore-whitespace         "$_diff" && return 0
+  _try "recount+3way"             git apply --recount --3way                      "$_diff" && return 0
+  _try "recount+3way+ignore-ws"   git apply --recount --3way --ignore-whitespace  "$_diff" && return 0
+  if command -v patch >/dev/null; then
+    _try "patch+fuzz=3"           patch -p1 -F 3 --no-backup-if-mismatch --silent -i "$_diff" && return 0
   fi
+  return 1
 }
 
 mode=$(apply_tried "$DIFF_PATH" /tmp/regen-apply.log) || {
