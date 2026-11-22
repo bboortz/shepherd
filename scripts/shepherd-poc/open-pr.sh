@@ -79,13 +79,26 @@ esac
 # has a trace.
 INTENT_PATH="${INTENT_PATH:-/tmp/intent.json}"
 if [ -s "$INTENT_PATH" ]; then
-  cp "$INTENT_PATH" .shepherd-intent.json
+  # Pretty-print the intent file so prettier-based caller repos (HRC, etc.)
+  # pass format-check. The compact single-line form that agent-call.sh emits
+  # was tripping HRC's `npx prettier . --check` lint on the agent's own PR.
+  # Fall back to `cp` if `jq` isn't available (shouldn't happen on ubuntu-latest).
+  if command -v jq >/dev/null; then
+    jq . "$INTENT_PATH" > .shepherd-intent.json
+  else
+    cp "$INTENT_PATH" .shepherd-intent.json
+  fi
   echo "→ Intent file committed alongside diff"
 else
   echo "::warning::no \$INTENT_PATH / empty intent — gates.waiting-period will hard-fail on this PR"
 fi
 
-git add -A
+# Exclude the shepherd scripts dir from the commit. The reusable workflow
+# clones shepherd into `_shepherd/` for its scripts; that directory has
+# its own `.git`, so a plain `git add -A` stages it as a submodule
+# reference on the agent's PR — a confusing artefact at best and a
+# protected-paths lint miss at worst.
+git add -A -- . ':(exclude)_shepherd'
 git commit -m "shepherd-poc: automated dependency fix ($timestamp)"
 git push -u origin "$branch"
 
