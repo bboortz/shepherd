@@ -8,6 +8,14 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.9.2-rc1] — 2026-11-23 — fix(ci): digest workflow `secrets.*` in `if:` expression
+
+`.github/workflows/digest.yml` referenced `secrets.NTFY_TOPIC_URL` directly in a step `if:` expression, which GitHub Actions rejects with `Unrecognized named-value: 'secrets'`. This made every digest run fail at workflow-parse time — including the weekly MON 09:00 cron.
+
+### Fixed
+
+- Route `NTFY_TOPIC_URL` through `env:` first, then compare `env.NTFY_TOPIC_URL != ''` in the step's `if:`. Step still no-ops cleanly when the secret is unset.
+
 ## [v0.9.1-rc1] — 2026-11-23 — INDEX sync: 36 stories now agree with frontmatter
 
 Reconciles `docs/stories/INDEX.md` with story-frontmatter status fields. Six stories had their work delivered but the INDEX still listed them as `draft`; another six shipped stories (SH-030/032/033/034/036/039) were missing from the INDEX entirely.
