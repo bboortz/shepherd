@@ -20,6 +20,7 @@ BUMP := bin/shepherd-bump
         verify-traceability verify-docs-layout verify-caps-traceability \
         verify-version-bumped verify-changelog install-hooks clean \
         lint test-affected smoke release-artifacts \
+        hook-commit hook-push \
         ci-branch ci-patch ci-release ci-release-promote ci-nightly ci-nightly-body ci-timing-init
 
 help:
@@ -29,6 +30,8 @@ help:
 	@echo "  test-acceptance     run every test/acceptance/test_SH_*.sh"
 	@echo "  injection-drill     SH-005 prompt-injection drill (tests/injection/run.sh)"
 	@echo "  check               yaml-lint + md-lint + verify-memory-size + build + test + injection-drill"
+	@echo "  hook-commit         fleet tier — ~15 s commit-stage gate (SH-042)"
+	@echo "  hook-push           fleet tier — ~2 min push-stage gate (SH-042)"
 	@echo "  yaml-lint           $(YAMLLINT) ."
 	@echo "  md-lint             $(MARKDOWNLINT) '**/*.md'"
 	@echo "  verify-memory-size  memory/*.md and CLAUDE.md each ≤ $(MEMORY_LINE_LIMIT) lines"
@@ -113,6 +116,20 @@ clean:
 # other fleet repo. Each tier emits build/ci-timing.json per docs/specs/ci-
 # timing.md schema v1, consumed by the digest in SH-020.
 # =============================================================================
+
+# ---------------------------------------------------------------------------
+# SH-042 — fleet-wide hook-commit / hook-push tier wrappers.
+# Each tier name means the same thing on every fleet repo; step contents stay
+# repo-native (shepherd's COMMIT_STEPS = yaml-lint + md-lint + verify-memory-
+# size; PUSH_STEPS = verify-traceability + build + test-acceptance).
+# Budgets: hook-commit ~15 s, hook-push ~2 min. See
+# docs/plan/IDEAS-dev-workflow-contract-v3.md for the fleet mapping.
+# ---------------------------------------------------------------------------
+COMMIT_STEPS ?= yaml-lint md-lint verify-memory-size
+PUSH_STEPS   ?= verify-traceability build test-acceptance
+
+hook-commit: $(COMMIT_STEPS)
+hook-push:   $(PUSH_STEPS)
 
 CI_BRANCH_BUDGET  ?= 300
 CI_PATCH_BUDGET   ?= 300

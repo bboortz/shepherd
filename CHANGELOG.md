@@ -6,7 +6,18 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-030 (fleet SHA-pin sweep), SH-033 (fleet pre-push convergence).
+Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-044 (mk/ci.mk master include), SH-054 (homelab pipeline restructure).
+
+## [v0.8.1-rc1] — 2026-11-23 — SH-042 hook-commit + hook-push fleet tiers (reference)
+
+Ships the two canonical **local-gate tier names** — `hook-commit` (~15 s) and `hook-push` (~2 min) — as thin Makefile wrappers delegating to repo-declared `COMMIT_STEPS` / `PUSH_STEPS`. Shepherd lands the reference implementation; six follow-up PRs will roll the wrappers onto each managed repo.
+
+### Added
+
+- `make hook-commit` → `yaml-lint md-lint verify-memory-size` (shepherd's commit-tier bundle).
+- `make hook-push` → `verify-traceability build test-acceptance` (shepherd's push-tier bundle).
+- `test/acceptance/test_SH_042_hook_tiers.sh` (12 assertions, 5 scenarios).
+- CAPABILITIES rows `dev-cycle.tier.hook-commit` + `dev-cycle.tier.hook-push`.
 
 ## [v0.8.0-rc1] — 2026-11-22 — SH-014 dev-cycle contract end-to-end + governance tier
 
