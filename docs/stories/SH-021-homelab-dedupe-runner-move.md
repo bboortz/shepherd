@@ -1,7 +1,7 @@
 ---
 id: SH-021
 slug: homelab-dedupe-runner-move
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

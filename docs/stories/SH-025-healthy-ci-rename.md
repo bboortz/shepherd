@@ -1,7 +1,7 @@
 ---
 id: SH-025
 slug: healthy-ci-rename
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

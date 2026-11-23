@@ -1,7 +1,7 @@
 ---
 id: SH-022
 slug: forge-affected-only
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

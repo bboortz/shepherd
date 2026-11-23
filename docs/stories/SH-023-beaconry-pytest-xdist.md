@@ -1,7 +1,7 @@
 ---
 id: SH-023
 slug: beaconry-pytest-xdist
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

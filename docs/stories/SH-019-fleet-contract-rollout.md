@@ -1,7 +1,7 @@
 ---
 id: SH-019
 slug: fleet-contract-rollout
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

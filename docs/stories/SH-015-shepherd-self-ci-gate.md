@@ -1,7 +1,7 @@
 ---
 id: SH-015
 slug: shepherd-self-ci-gate
-status: draft
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

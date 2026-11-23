@@ -8,6 +8,17 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.9.1-rc1] — 2026-11-23 — INDEX sync: 36 stories now agree with frontmatter
+
+Reconciles `docs/stories/INDEX.md` with story-frontmatter status fields. Six stories had their work delivered but the INDEX still listed them as `draft`; another six shipped stories (SH-030/032/033/034/036/039) were missing from the INDEX entirely.
+
+### Changed
+
+- INDEX.md status column now matches frontmatter for all 36 stories (verified via diff of status fields).
+- Flipped frontmatter + INDEX for SH-015 (subsumed by SH-016), SH-019 (fleet rollout complete), SH-021 (shipped via SH-054), SH-022 (forge check-smart active), SH-023 (shipped as beaconry BC-149), SH-025 (healthy is reference impl).
+- Added INDEX rows for SH-030, SH-032, SH-033, SH-034, SH-036, SH-039 (all shipped between 2026-11-22 and -23).
+- Refreshed row descriptions on SH-017 (post-SH-044 include-aware scan), SH-027 and SH-028 (CAPs active, test counts).
+
 ## [v0.9.0-rc1] — 2026-11-23 — SH-008 sandbox perimeter + R1 feature-complete
 
 **R1 is feature-complete.** SH-008 lands the last outstanding sub-story of the SH-006 R1 umbrella: iptables-based network lockdown around the Agent-call step, pinning the agent to `api.anthropic.com:443` only.
