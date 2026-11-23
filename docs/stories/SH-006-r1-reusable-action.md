@@ -1,7 +1,7 @@
 ---
 id: SH-006
 slug: r1-reusable-action
-status: ready
+status: shipped
 created: 2026-11-21
 owner: @benni
 ---

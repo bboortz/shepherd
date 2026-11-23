@@ -87,12 +87,34 @@ jobs:
             --exit-code 0 \
             .
 
-      - name: Agent call
+      # SH-008 — sandbox perimeter. Locks outbound to api.anthropic.com:443
+      # only (plus loopback). The trap ensures the lockdown is torn down
+      # even if agent-call.sh exits non-zero; later steps (regen-lockfile,
+      # open-pr) need the normal network back.
+      - name: Agent call (sandboxed network)
         id: agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set +e
+          # Set up the lockdown. Trap restore so the perimeter comes down
+          # regardless of what the agent does inside it.
+          ./_shepherd/scripts/shepherd-poc/network-lockdown.sh
+          trap './_shepherd/scripts/shepherd-poc/network-restore.sh' EXIT
+
+          # SH-008 live acceptance: non-anthropic outbound MUST fail.
+          # If this succeeds the sandbox has a hole — fail loudly before
+          # running the agent.
+          if curl -sS -m 5 --fail https://api.openai.com/ >/dev/null 2>&1; then
+            echo "::error::SH-008 sandbox breach — api.openai.com reachable from the agent step"
+            exit 90
+          fi
+          if curl -sS -m 5 --fail https://github.com/ >/dev/null 2>&1; then
+            echo "::error::SH-008 sandbox breach — github.com reachable from the agent step"
+            exit 91
+          fi
+          echo "SH-008: sandbox verified (openai + github both blocked)"
+
           ./_shepherd/scripts/shepherd-poc/agent-call.sh
           rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
