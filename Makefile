@@ -19,7 +19,7 @@ BUMP := bin/shepherd-bump
 .PHONY: help build test test-acceptance injection-drill check yaml-lint md-lint verify-memory-size \
         verify-traceability verify-docs-layout verify-caps-traceability \
         verify-version-bumped verify-changelog install-hooks clean \
-        lint test-affected smoke release-artifacts \
+        lint test-affected smoke release-artifacts check-docs \
         hook-commit hook-push \
         ci-branch ci-patch ci-release ci-release-promote ci-nightly ci-nightly-body ci-timing-init
 
@@ -89,6 +89,14 @@ verify-memory-size:
 
 verify-traceability: verify-docs-layout verify-caps-traceability
 
+# ---------------------------------------------------------------------------
+# SH-055 — fleet-wide check-docs wrapper. Each fleet repo's check-docs
+# target has the SAME NAME but repo-specific body. Shepherd's wraps the
+# existing verify-* drift targets; see docs/plan/SH-055-check-docs-plan.md
+# for the per-repo mapping.
+# ---------------------------------------------------------------------------
+check-docs: verify-traceability verify-memory-size
+
 verify-docs-layout:
 	@test/acceptance/test_SH_012_docs_layout.sh
 
@@ -125,8 +133,8 @@ clean:
 # docs/plan/IDEAS-dev-workflow-contract-v3.md Layer 3.
 # ---------------------------------------------------------------------------
 COMMIT_STEPS  = yaml-lint md-lint verify-memory-size
-PUSH_STEPS    = verify-traceability build test-acceptance
-BRANCH_STEPS  = lint release-artifacts test-affected injection-drill
+PUSH_STEPS    = verify-traceability check-docs build test-acceptance
+BRANCH_STEPS  = lint check-docs release-artifacts test-affected injection-drill
 PATCH_STEPS   = smoke
 RELEASE_STEPS = ci-release-promote
 NIGHTLY_STEPS = check

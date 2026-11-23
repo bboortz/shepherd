@@ -8,6 +8,21 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.10.0-rc1] — 2026-11-23 — SH-055 fleet-wide `check-docs` wrapper (reference)
+
+Ships the canonical `check-docs` tier wrapper on shepherd as the reference. Six per-repo PRs on managed repos follow. Observation-driven: each doc-staleness incident this week (shepherd INDEX ↔ frontmatter drift, beaconry VERSION-sync across three files, missing story-doc for `feat/*` branch) would have been caught pre-push if the fleet had a uniform drift gate.
+
+### Added
+
+- `.PHONY: check-docs` — thin wrapper delegating to `verify-traceability verify-memory-size` (shepherd's drift surface).
+- `check-docs` added to `PUSH_STEPS` AND `BRANCH_STEPS` — drift caught pre-push (author pays locally) + backed up on `ci-branch` CI (catches hook bypasses).
+- `test/acceptance/test_SH_055_check_docs.sh` (11 assertions, 6 scenarios).
+- CAPABILITIES row `dev-cycle.tier.check-docs` + refreshed `dev-cycle.tier.hook-push` row to mention check-docs.
+
+### Not breaking
+
+Strictly additive. `check-docs` is a new target name; the delegate targets are unchanged. Steps lists grow by one token. Per-repo content stays native — only the wrapper name is fleet-aligned (same rejection of step-name coercion as SH-042).
+
 ## [v0.9.3-rc1] — 2026-11-23 — fix(ci): digest skips cleanly when SHEPHERD_APP_ID unset
 
 The digest workflow requires a GitHub App (DESIGN §13 R2+ advanced mode). Until the App is provisioned, `SHEPHERD_APP_ID` is unset and `create-github-app-token` fails hard. Add a gate step that sets `outputs.skip=true` when the secret is absent; every later step guards on `steps.gate.outputs.skip != 'true'`. The workflow now exits 0 cleanly on the weekly cron until R2 provisions the App.
