@@ -1,7 +1,7 @@
 ---
 id: SH-012
 slug: docs-layout-reshape
-status: in-progress
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

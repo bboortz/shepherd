@@ -1,7 +1,7 @@
 ---
 id: SH-014
 slug: dev-cycle-umbrella
-status: ready
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---

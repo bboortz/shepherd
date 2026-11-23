@@ -1,7 +1,7 @@
 ---
 id: SH-044
 slug: mk-ci-include
-status: in-progress
+status: shipped
 created: 2026-11-23
 owner: @benni
 ---

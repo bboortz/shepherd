@@ -1,7 +1,7 @@
 ---
 id: SH-026
 slug: baseline-capture
-status: in-progress
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
