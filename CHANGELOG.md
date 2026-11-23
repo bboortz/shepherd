@@ -6,7 +6,22 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`), SH-054 (homelab pipeline restructure).
+Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
+
+## [v0.8.3-rc1] — 2026-11-23 — status-flip cleanup (SH-012/013/016/026/042/044 + SH-014 umbrella)
+
+Flips seven story frontmatters that were stuck at `in-progress` or `ready` while their work had already merged. Also backfills four INDEX rows (SH-042/043/044/052) that were missing.
+
+### Changed
+
+- `docs/stories/SH-012-docs-layout-reshape.md` — `in-progress` → `shipped`
+- `docs/stories/SH-013-caps-traceability.md` — `in-progress` → `shipped`
+- `docs/stories/SH-016-shepherd-makefile-contract.md` — `in-progress` → `shipped`
+- `docs/stories/SH-026-baseline-capture.md` — `in-progress` → `shipped`
+- `docs/stories/SH-042-hook-tiers.md` — `in-progress` → `shipped`
+- `docs/stories/SH-044-mk-ci-include.md` — `in-progress` → `shipped`
+- `docs/stories/SH-014-dev-cycle-umbrella.md` — `ready` → `shipped` (umbrella; sub-stories SH-015..SH-029 shipped across R1 soak; `dev-cycle.*` CAPs active)
+- `docs/stories/INDEX.md` — adds rows for SH-042/043/044/052; corrects SH-014/016/026 statuses
 
 ## [v0.8.2-rc1] — 2026-11-23 — SH-044 `mk/ci.mk` master include
 

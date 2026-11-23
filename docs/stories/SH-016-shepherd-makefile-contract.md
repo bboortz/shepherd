@@ -1,7 +1,7 @@
 ---
 id: SH-016
 slug: shepherd-makefile-contract
-status: in-progress
+status: shipped
 created: 2026-11-22
 owner: @benni
 ---
