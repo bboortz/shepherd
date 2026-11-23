@@ -8,6 +8,14 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.9.3-rc1] — 2026-11-23 — fix(ci): digest skips cleanly when SHEPHERD_APP_ID unset
+
+The digest workflow requires a GitHub App (DESIGN §13 R2+ advanced mode). Until the App is provisioned, `SHEPHERD_APP_ID` is unset and `create-github-app-token` fails hard. Add a gate step that sets `outputs.skip=true` when the secret is absent; every later step guards on `steps.gate.outputs.skip != 'true'`. The workflow now exits 0 cleanly on the weekly cron until R2 provisions the App.
+
+### Fixed
+
+- `.github/workflows/digest.yml` — gate step + per-step `if:` guards. No behavior change once the App is live (gate returns false, pipeline runs end-to-end).
+
 ## [v0.9.2-rc1] — 2026-11-23 — fix(ci): digest workflow `secrets.*` in `if:` expression
 
 `.github/workflows/digest.yml` referenced `secrets.NTFY_TOPIC_URL` directly in a step `if:` expression, which GitHub Actions rejects with `Unrecognized named-value: 'secrets'`. This made every digest run fail at workflow-parse time — including the weekly MON 09:00 cron.
