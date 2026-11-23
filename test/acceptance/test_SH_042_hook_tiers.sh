@@ -36,9 +36,10 @@ assert_grep "markdownlint"        make -n hook-commit
 assert_grep "memory/MEMORY.md"    make -n hook-commit
 
 # ----- Scenario 4 — hook-push dry-run invokes the push steps --------------
+# Note: `build` is a file-target and may be skipped as up-to-date in CI (ci-
+# branch builds the artifact before test-affected). We assert the two .PHONY
+# bundles instead, which always emit their recipes.
 assert_grep "verify-traceability.sh"      make -n hook-push
-assert_grep "zig build"                   make -n hook-push
-# test-acceptance expands to its recipe loop; look for its iteration marker.
 assert_grep "test/acceptance/test_SH_"    make -n hook-push
 
 # ----- Scenario 5 — docs link resolves ------------------------------------
