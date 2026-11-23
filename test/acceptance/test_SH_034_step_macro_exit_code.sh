@@ -33,26 +33,31 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 cd "$repo" || exit 1
 
-for mk in Makefile templates/Makefile.contract.snippet; do
+# Scan every Make file that hosts a tier recipe. Shepherd migrated the `step`
+# macro to `run_tier` in mk/ci.mk (SH-044); exit-code shape is preserved but
+# syntax changed (if/then/else with explicit `exit $$_rc`). The templates
+# snippet still carries the legacy `step` macro for repos not yet on mk/ci.mk.
+for mk in mk/ci.mk templates/Makefile.contract.snippet; do
   [ -f "$mk" ] || { fail=$((fail + 1)); echo "FAIL: $mk missing"; continue; }
 
-  # Scenario 1 — macro captures _rc immediately after $(2)
-  assert_matches '$(2); _rc=$$?;' "$mk" "$mk: _rc capture after inner recipe"
-
-  # Scenario 2 — macro replays the captured _rc as the compound's exit code
+  # Scenario 1/2 — captured _rc gets replayed as the compound's exit code.
+  assert_matches '_rc=$$?' "$mk" "$mk: _rc capture"
   assert_matches 'exit $$_rc' "$mk" "$mk: exit \$\$_rc replay"
 
-  # Scenario 3 — the old swallowed-exit form is gone within the step macro
-  # block. Scan only between `define step` and `endef` (awk with a flag var
-  # that is not an awk keyword).
-  swallow_count=$(awk '
-    /^define step/ { in_block = 1; next }
-    /^endef/       { in_block = 0 }
-    in_block && /\$\(2\); \\/ && !/_rc/ { n++ }
-    END { print (n+0) }
-  ' "$mk")
-  if [ "$swallow_count" = 0 ]; then pass=$((pass + 1))
-  else fail=$((fail + 1)); echo "FAIL $mk: bare backslash-chained inner recipe still present (swallows exit code)"; fi
+  # Scenario 3 — the old swallowed-exit form is forbidden inside any
+  # `define step` block in this file.
+  if grep -Fq "define step" "$mk"; then
+    swallow_count=$(awk '
+      /^define step/ { in_block = 1; next }
+      /^endef/       { in_block = 0 }
+      in_block && /\$\(2\); \\/ && !/_rc/ { n++ }
+      END { print (n+0) }
+    ' "$mk")
+    if [ "$swallow_count" = 0 ]; then pass=$((pass + 1))
+    else fail=$((fail + 1)); echo "FAIL $mk: bare backslash-chained inner recipe still present"; fi
+  else
+    pass=$((pass + 1))  # Not a `step`-macro host; scenario 3 N/A.
+  fi
 done
 
 # Scenario 4 — end-to-end sanity: a failing recipe through the step macro

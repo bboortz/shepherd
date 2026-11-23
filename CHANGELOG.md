@@ -6,7 +6,26 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-044 (mk/ci.mk master include), SH-054 (homelab pipeline restructure).
+Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`), SH-054 (homelab pipeline restructure).
+
+## [v0.8.2-rc1] — 2026-11-23 — SH-044 `mk/ci.mk` master include
+
+Ships `mk/ci.mk` as the canonical fleet-tier scaffolding so managed repos declare only their `*_STEPS` variables and `include mk/ci.mk`. Shepherd dogfoods. §12 trust-boundary is extended: `mk/**` joins `templates/**` + workflows + `scripts/shepherd-poc/**` on the agent blocklist.
+
+### Added
+
+- `mk/ci.mk` — canonical fleet master include: `hook-commit`/`hook-push` wrappers + `ci-branch`/`ci-patch`/`ci-release` tier targets + `ci-release-promote` + `run_tier` loop macro + `ci-timing-finish-cmd` JSON emission. `ci-nightly` intentionally NOT shipped (per-repo escalation policy differs).
+- Shepherd `Makefile` dogfoods via `include mk/ci.mk`; declares six `*_STEPS` variables.
+- `test/acceptance/test_SH_044_mk_ci_include.sh` (25 assertions, 5 scenarios).
+- CAPABILITIES row `dev-cycle.master-include`.
+
+### Changed
+
+- `shepherd-bump --verify-contract` — when `Makefile` contains `include mk/ci.mk`, the scanner concatenates `mk/ci.mk` contents before checking contract-target coverage.
+- `blocklist.protected-files` CAP — `mk/**` added to the agent blocklist.
+- `dev-cycle.step.exit-code-propagation` CAP — SH-034 regression guard now watches `mk/ci.mk` (primary) + `templates/Makefile.contract.snippet` (legacy).
+
+## [v0.8.1-rc1] — 2026-11-23 — SH-042 hook-commit + hook-push fleet tiers (reference)
 
 ## [v0.8.1-rc1] — 2026-11-23 — SH-042 hook-commit + hook-push fleet tiers (reference)
 

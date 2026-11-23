@@ -487,10 +487,30 @@ fn cmdVerifyContract(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u
     };
     defer allocator.free(contents);
 
+    // --- Also read mk/ci.mk if the Makefile `include`s it (SH-044) --------
+    // Targets defined in the master include count toward contract coverage.
+    var combined: []const u8 = contents;
+    var owned: ?[]u8 = null;
+    defer if (owned) |b| allocator.free(b);
+    if (std.mem.indexOf(u8, contents, "include mk/ci.mk") != null) {
+        if (root.readFileAlloc(io, "mk/ci.mk", allocator, .limited(256 * 1024))) |mk| {
+            defer allocator.free(mk);
+            const merged = try allocator.alloc(u8, contents.len + 1 + mk.len);
+            @memcpy(merged[0..contents.len], contents);
+            merged[contents.len] = '\n';
+            @memcpy(merged[contents.len + 1 ..], mk);
+            owned = merged;
+            combined = merged;
+        } else |err| switch (err) {
+            error.FileNotFound => {}, // include line present but file missing — fall through; targets will show as missing
+            else => return err,
+        }
+    }
+
     // --- Target coverage -------------------------------------------------
     var missing_count: usize = 0;
     for (CONTRACT_TARGETS) |t| {
-        if (!makefileHasTarget(contents, t)) {
+        if (!makefileHasTarget(combined, t)) {
             std.debug.print("verify-contract: missing target `{s}`\n", .{t});
             missing_count += 1;
         }
