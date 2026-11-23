@@ -43,9 +43,12 @@ jobs:
           exit 0
 
       - name: Post digest to ntfy
-        if: ${{ secrets.NTFY_TOPIC_URL != '' }}
+        # GH Actions doesn't allow `secrets.*` in `if:` expressions. Route
+        # the secret through env; the condition checks env (which is '' if
+        # the secret is unset) so the step no-ops cleanly without the topic.
         env:
           NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
+        if: env.NTFY_TOPIC_URL != ''
         run: |
           body=$(cat /tmp/digest.md)
           curl -sS -H "Title: Shepherd weekly digest" -d "$body" "$NTFY_TOPIC_URL" || true
