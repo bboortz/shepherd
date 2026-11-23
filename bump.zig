@@ -621,7 +621,25 @@ fn cmdVerifyPrepush(allocator: std.mem.Allocator, io: std.Io, opts: Options) !u8
         else => return err,
     }
 
-    std.debug.print("verify-prepush: no pre-push config found (.pre-commit-config.yaml or .husky/pre-push) (exit 3)\n", .{});
+    // --- Finally try .githooks/pre-push (SH-043) ------------------------
+    // Pattern used by homelab + kernel-test: git config core.hooksPath = .githooks.
+    // We cannot read `git config` from a Zig CLI, so we accept the file's presence
+    // + content as evidence. The hook-install step must point core.hooksPath at
+    // .githooks separately; the verifier does not enforce that git-config value.
+    if (root.readFileAlloc(io, ".githooks/pre-push", allocator, .limited(256 * 1024))) |cfg| {
+        defer allocator.free(cfg);
+        if (huskyPrePushHasMakeCheck(cfg)) {
+            std.debug.print("verify-prepush: ok (.githooks/pre-push invokes `make check`; ensure `git config core.hooksPath .githooks` is set)\n", .{});
+            return 0;
+        }
+        std.debug.print("verify-prepush: .githooks/pre-push present but doesn't invoke `make check` (exit 4)\n", .{});
+        return 4;
+    } else |err| switch (err) {
+        error.FileNotFound => {},
+        else => return err,
+    }
+
+    std.debug.print("verify-prepush: no pre-push config found (.pre-commit-config.yaml, .husky/pre-push, or .githooks/pre-push) (exit 3)\n", .{});
     return 3;
 }
 
