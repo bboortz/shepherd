@@ -26,7 +26,7 @@ Shepherd PR (this one) also:
 HRC + kernel-test additionally need a new tiny verifier script:
 
 - **HRC** `scripts/verify-stories-index.sh` — scans `docs/stories/SH-NNN-*.md` + checks each has a matching row in `docs/stories/INDEX.md`. Same bug class as the shepherd INDEX drift we fixed via PR #55.
-- **kernel-test** `scripts/verify-plan-docs.sh` — on `feat/SH-NNN-*` branches, asserts `docs/plans/SH-NNN-*.md` exists. This rule is already in `.githooks/pre-push`; SH-055 exposes it under the fleet-aligned name so CI backs up the local hook.
+- **kernel-test** `scripts/verify-plan-docs.sh` — on `feat/SH-NNN-*` branches, asserts a matching plan doc exists (kernel-test uses `docs/plans` — plural — not shepherd's `docs/plan`). This rule is already in `.githooks/pre-push`; SH-055 exposes it under the fleet-aligned name so CI backs up the local hook.
 
 ## Alternatives rejected
 

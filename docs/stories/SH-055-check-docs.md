@@ -35,7 +35,7 @@ Mechanically checkable per-repo:
 | beaconry | `verify-docs-drift verify-docs-layout verify-version-sync verify-evidence-pointers verify-traceability verify-install-doc` |
 | HRC | `verify-stories-index` — new tiny script; checks `docs/stories/INDEX.md` has a row for every `docs/stories/SH-NNN-*.md` (frontmatter → INDEX sync, same bug class we hit on shepherd) |
 | homelab | `scripts/check-docs.sh` (unchanged — the existing 16-check script) |
-| kernel-test | `verify-plan-docs` — new tiny script; asserts every `feat/*` branch has `docs/plans/SH-NNN-*.md` |
+| kernel-test | `verify-plan-docs` — new tiny script; on `feat/SH-NNN-*` branches asserts a matching plan doc exists (kernel-test uses `docs/plans` — plural — not shepherd's `docs/plan`) |
 | forge | `verify-traceability verify-sid-pins verify-promises-version` |
 
 ## 4. How urgent?
