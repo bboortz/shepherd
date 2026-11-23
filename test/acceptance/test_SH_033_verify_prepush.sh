@@ -116,10 +116,31 @@ npm test
 EOF
 assert_rc 4 "$BUMP" --verify-prepush --root "$tmp/husky-bad"
 
+# ----- Scenario 7b — .githooks/pre-push with make check passes (SH-043) --
+mkdir -p "$tmp/githooks/.githooks"
+cat > "$tmp/githooks/.githooks/pre-push" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+make check
+EOF
+chmod +x "$tmp/githooks/.githooks/pre-push"
+assert_rc 0 "$BUMP" --verify-prepush --root "$tmp/githooks"
+assert_stdout_contains ".githooks/pre-push" "$BUMP" --verify-prepush --root "$tmp/githooks"
+
+# ----- Scenario 7c — .githooks/pre-push without make check fails ---------
+mkdir -p "$tmp/githooks-bad/.githooks"
+cat > "$tmp/githooks-bad/.githooks/pre-push" <<'EOF'
+#!/bin/bash
+echo only-prints
+EOF
+chmod +x "$tmp/githooks-bad/.githooks/pre-push"
+assert_rc 4 "$BUMP" --verify-prepush --root "$tmp/githooks-bad"
+
 # ----- Scenario 8 — no config at all → exit 3 -----------------------------
 mkdir -p "$tmp/nothing"
 assert_rc 3 "$BUMP" --verify-prepush --root "$tmp/nothing"
 assert_stdout_contains "no pre-push config found" "$BUMP" --verify-prepush --root "$tmp/nothing"
+assert_stdout_contains ".githooks/pre-push" "$BUMP" --verify-prepush --root "$tmp/nothing"
 
 # ----- Scenario 9 — opt-out via .shepherd.yml → exit 0 --------------------
 mkdir -p "$tmp/optout"
