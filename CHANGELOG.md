@@ -6,7 +6,34 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 ## [Unreleased]
 
-Next: SH-008 (sandbox perimeter) — the last remaining R1 sub-story. Follow-ups queued: SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
+Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
+
+## [v0.9.0-rc1] — 2026-11-23 — SH-008 sandbox perimeter + R1 feature-complete
+
+**R1 is feature-complete.** SH-008 lands the last outstanding sub-story of the SH-006 R1 umbrella: iptables-based network lockdown around the Agent-call step, pinning the agent to `api.anthropic.com:443` only.
+
+### Added
+
+- `scripts/shepherd-poc/network-lockdown.sh` — pre-resolves `api.anthropic.com`, pins the IP in `/etc/hosts`, flushes `iptables OUTPUT`, sets default policy DROP, ACCEPTs loopback + established/related + resolved anthropic IPs on tcp/443.
+- `scripts/shepherd-poc/network-restore.sh` — flips OUTPUT back to ACCEPT, flushes rules. Idempotent, never-fails.
+- `.github/workflows/reusable-shepherd.yml` — `Agent call (sandboxed network)` step: wraps the perimeter around `agent-call.sh` with a `trap EXIT` restore so later steps regain full network. Inline live-check (`curl api.openai.com` + `curl github.com` → exit 90/91 on breach) proves the perimeter on every real CI run — the enforcement IS the test.
+- `test/acceptance/test_SH_008_sandbox_perimeter.sh` — 25 assertions, 8 scenarios (source-form: script shape + workflow wiring + CAP-flip presence).
+- `docs/stories/SH-008-sandbox-perimeter.md` + `docs/plan/SH-008-sandbox-perimeter-plan.md`.
+
+### Changed
+
+- CAP `sandbox.no-network-except-model` — `design → active`.
+- CAP `gateway.model-only` — `design → active`.
+- CAP `blocklist.protected-files` — unchanged, but §12 invariant 2 ("agent runs with no network") is now literally true, not aspirational.
+- `docs/stories/SH-006-r1-reusable-action.md` — `ready → shipped`. R1 umbrella feature-complete.
+
+### Why
+
+Before SH-008 the trust-boundary invariant "agent runs with no network and no secrets of its own" was only enforced by prompt-injection drills + hope. A successfully-injected agent could call any URL. SH-008 makes the invariant literally true at the kernel level: the agent can reach api.anthropic.com or nothing. The inline live-check in the workflow step means a sandbox hole fails CI loudly; silent degradation is impossible.
+
+### Not breaking
+
+Managed repos' caller workflows don't change. The Agent-call step gains the lockdown; every other step (`regen-lockfile`, `open-pr`, trivy scan) keeps full network access. The `trap EXIT` guarantees the perimeter comes down before any step that needs the network.
 
 ## [v0.8.3-rc1] — 2026-11-23 — status-flip cleanup (SH-012/013/016/026/042/044 + SH-014 umbrella)
 
@@ -39,8 +66,6 @@ Ships `mk/ci.mk` as the canonical fleet-tier scaffolding so managed repos declar
 - `shepherd-bump --verify-contract` — when `Makefile` contains `include mk/ci.mk`, the scanner concatenates `mk/ci.mk` contents before checking contract-target coverage.
 - `blocklist.protected-files` CAP — `mk/**` added to the agent blocklist.
 - `dev-cycle.step.exit-code-propagation` CAP — SH-034 regression guard now watches `mk/ci.mk` (primary) + `templates/Makefile.contract.snippet` (legacy).
-
-## [v0.8.1-rc1] — 2026-11-23 — SH-042 hook-commit + hook-push fleet tiers (reference)
 
 ## [v0.8.1-rc1] — 2026-11-23 — SH-042 hook-commit + hook-push fleet tiers (reference)
 
