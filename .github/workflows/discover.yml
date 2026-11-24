@@ -11,8 +11,26 @@ permissions: {}
 jobs:
   discover:
     runs-on: ubuntu-latest
+    # Discover requires a GitHub App for cross-repo fleet read. The App
+    # isn't provisioned yet (R2+ advanced mode per DESIGN §13). Until then
+    # the secret is unset and we skip the whole job cleanly rather than
+    # fail the nightly cron. Same gate shape as digest.yml.
+    env:
+      SHEPHERD_APP_ID: ${{ secrets.SHEPHERD_APP_ID }}
     steps:
+      - name: Check GitHub App secret present
+        id: gate
+        run: |
+          if [ -z "$SHEPHERD_APP_ID" ]; then
+            echo "SHEPHERD_APP_ID not set — discover requires GitHub App auth."
+            echo "Skipping cleanly; configure the App in R2 to enable discover."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate installation token
+        if: steps.gate.outputs.skip != 'true'
         id: token
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
         with:
@@ -21,8 +39,10 @@ jobs:
           owner: ${{ github.repository_owner }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        if: steps.gate.outputs.skip != 'true'
 
       - name: Onboard tagged repos and flag untagged ones
+        if: steps.gate.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           OWNER: ${{ github.repository_owner }}

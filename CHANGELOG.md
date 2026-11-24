@@ -8,6 +8,14 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.10.2-rc1] — 2026-11-24 — fix(ci): discover.yml skips cleanly when SHEPHERD_APP_ID unset
+
+Same bug class as digest.yml had (fixed in v0.9.3-rc1): `discover.yml` references `create-github-app-token` with an unset `SHEPHERD_APP_ID` secret, failing hard on every nightly 03:00 cron. Added the same `steps.gate.outputs.skip` guard pattern — each step gates on `SHEPHERD_APP_ID != ''`. Workflow now exits 0 cleanly until R2 provisions the App.
+
+### Fixed
+
+- `.github/workflows/discover.yml` — gate step + per-step `if:` guards.
+
 ## [v0.10.1-rc1] — 2026-11-24 — SH-056 `verify-index-status` (closes SH-055 gap) + SH-055 shipped
 
 Closes the specific INDEX ↔ frontmatter status-drift class I named in SH-055's §5 example but didn't actually wire up. `scripts/verify-index-status.sh` compares each story file's frontmatter `status:` against its INDEX.md row's status column; fails on mismatch. Wired into shepherd's `check-docs` target.
