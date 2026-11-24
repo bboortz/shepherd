@@ -8,6 +8,28 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.10.1-rc1] — 2026-11-24 — SH-056 `verify-index-status` (closes SH-055 gap) + SH-055 shipped
+
+Closes the specific INDEX ↔ frontmatter status-drift class I named in SH-055's §5 example but didn't actually wire up. `scripts/verify-index-status.sh` compares each story file's frontmatter `status:` against its INDEX.md row's status column; fails on mismatch. Wired into shepherd's `check-docs` target.
+
+### Added
+
+- `scripts/verify-index-status.sh` — portable shell (~45 lines); walks `docs/stories/<ID>-*.md`; exits 1 on any drift. No-ops cleanly when INDEX is absent.
+- `verify-index-status` Make target invoking the script.
+- `test/acceptance/test_SH_056_verify_index_status.sh` (15 assertions, 8 scenarios including live drift-catch via fixture flip).
+- CAPABILITIES row `dev-cycle.verify-index-status` + refreshed `dev-cycle.tier.check-docs` row.
+- INDEX rows for SH-055 + SH-056.
+
+### Changed
+
+- `check-docs` prereq list — adds `verify-index-status`.
+- SH-055 frontmatter — `in-progress` → `shipped`.
+- `.PHONY` list — adds `verify-index-status`.
+
+### Per-repo rollout
+
+Shepherd lands reference (this PR). Per-repo PRs on healthy, beaconry, homelab, kernel-test, forge follow — each is a byte-identical script copy + one Make target + `check-docs` prereq edit. HRC skipped (no `docs/stories/INDEX.md`).
+
 ## [v0.10.0-rc1] — 2026-11-23 — SH-055 fleet-wide `check-docs` wrapper (reference)
 
 Ships the canonical `check-docs` tier wrapper on shepherd as the reference. Six per-repo PRs on managed repos follow. Observation-driven: each doc-staleness incident this week (shepherd INDEX ↔ frontmatter drift, beaconry VERSION-sync across three files, missing story-doc for `feat/*` branch) would have been caught pre-push if the fleet had a uniform drift gate.

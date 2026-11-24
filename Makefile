@@ -17,7 +17,7 @@ ACCEPTANCE_TESTS := $(wildcard test/acceptance/test_SH_*.sh)
 BUMP := bin/shepherd-bump
 
 .PHONY: help build test test-acceptance injection-drill check yaml-lint md-lint verify-memory-size \
-        verify-traceability verify-docs-layout verify-caps-traceability \
+        verify-traceability verify-docs-layout verify-caps-traceability verify-index-status \
         verify-version-bumped verify-changelog install-hooks clean \
         lint test-affected smoke release-artifacts check-docs \
         hook-commit hook-push \
@@ -89,13 +89,18 @@ verify-memory-size:
 
 verify-traceability: verify-docs-layout verify-caps-traceability
 
+# SH-056 — catches INDEX row status ≠ frontmatter status (gap SH-055 named
+# but didn't actually wire up).
+verify-index-status:
+	@scripts/verify-index-status.sh
+
 # ---------------------------------------------------------------------------
 # SH-055 — fleet-wide check-docs wrapper. Each fleet repo's check-docs
 # target has the SAME NAME but repo-specific body. Shepherd's wraps the
-# existing verify-* drift targets; see docs/plan/SH-055-check-docs-plan.md
-# for the per-repo mapping.
+# existing verify-* drift targets + SH-056's index-status check; see
+# docs/plan/SH-055-check-docs-plan.md for the per-repo mapping.
 # ---------------------------------------------------------------------------
-check-docs: verify-traceability verify-memory-size
+check-docs: verify-traceability verify-index-status verify-memory-size
 
 verify-docs-layout:
 	@test/acceptance/test_SH_012_docs_layout.sh
