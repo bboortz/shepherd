@@ -1,7 +1,7 @@
 ---
 id: SH-055
 slug: check-docs
-status: in-progress
+status: shipped
 created: 2026-11-23
 owner: @benni
 ---
