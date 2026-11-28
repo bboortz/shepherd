@@ -59,7 +59,7 @@ The check catalogue folds the two prior manual audits into one definition:
 | Wire into `make check` / CI as a gate | Needs network + `gh` auth; would make CI flaky and couples a release gate to live GitHub state. The audit is a human-pulled snapshot; keep it out of the blocking path (story §7). |
 | Hardcode the six repos | FLEET.md is the registry (`memory/project.md`); hardcoding would drift the moment a 7th repo lands. Parse the Active table. |
 | Exit non-zero on drift (`--strict`) | Would let the audit wedge a release on transient GitHub state. Verdict lives in the report; `--strict` parked as a follow-up (story §7). |
-| New `docs/audits/` directory | `verify-docs-layout` enforces specs/plan/stories only; both prior audits live in `docs/specs/`. Keep the convention. |
+| A new top-level audits directory under docs | `verify-docs-layout` enforces specs/plan/stories only; both prior audits live under specs. Keep the convention. |
 
 ## Breaking changes
 
