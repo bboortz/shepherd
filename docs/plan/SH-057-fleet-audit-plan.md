@@ -3,7 +3,7 @@ id: SH-057
 slug: fleet-audit
 story: docs/stories/SH-057-fleet-audit.md
 branch: feat/SH-057-fleet-audit
-status: in-progress    # in-progress → shipped
+status: shipped    # in-progress → shipped
 ---
 
 # SH-057 plan — `make fleet-audit`: one repeatable fleet arming + health audit

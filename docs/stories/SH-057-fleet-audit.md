@@ -1,7 +1,7 @@
 ---
 id: SH-057
 slug: fleet-audit
-status: in-progress        # draft → ready → in-progress → shipped
+status: shipped        # draft → ready → in-progress → shipped
 created: 2026-11-28
 owner: @benni
 ---
