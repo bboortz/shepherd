@@ -8,6 +8,32 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.11.0-rc1] — 2026-11-28 — SH-057 `make fleet-audit` (one repeatable fleet audit)
+
+Replaces hand-written fleet audits with one command. `scripts/fleet-audit.sh`
+folds the two precursors (2026-11-22 best-practice matrix, 2026-11-28 arming
+matrix) plus pipeline health into a single fixed-structure Markdown report with
+a mechanically-derived verdict (`FULLY ARMED` / `DRIFT DETECTED` /
+`INCONCLUSIVE`). The repo list is parsed from `docs/FLEET.md`; `--offline` mode
+renders the structure without the network so CI can prove the procedure is
+well-formed. Read-only against managed repos — never adds a topic or flips
+`dry_run`. Operator tool, deliberately **not** wired into `check`/`ci-*`.
+
+### Added
+
+- `scripts/fleet-audit.sh` + `make fleet-audit` (arming matrix + 11-column
+  best-practice matrix + pipeline health + verdict; writes
+  `docs/specs/fleet-audit-<date>.md`).
+- `test/acceptance/test_SH_057_fleet_audit.sh` (27 assertions, 7 scenarios,
+  offline-only).
+- CAP `fleet.audit.repeatable`; story SH-057 + plan.
+- `docs/specs/fleet-consistency-audit-2026-11-28.md` — the hand-written
+  precursor pass that motivated the story (found 3 pilots missing the
+  `shepherd-managed` topic).
+- `docs/specs/fleet-audit-2026-11-28.md` — first live `make fleet-audit` output
+  (verdict: DRIFT DETECTED — 0/6 fully armed; also surfaced red `ci-release` on
+  homelab/kernel-test/forge and homelab `ci-nightly`).
+
 ## [v0.10.2-rc1] — 2026-11-24 — fix(ci): discover.yml skips cleanly when SHEPHERD_APP_ID unset
 
 Same bug class as digest.yml had (fixed in v0.9.3-rc1): `discover.yml` references `create-github-app-token` with an unset `SHEPHERD_APP_ID` secret, failing hard on every nightly 03:00 cron. Added the same `steps.gate.outputs.skip` guard pattern — each step gates on `SHEPHERD_APP_ID != ''`. Workflow now exits 0 cleanly until R2 provisions the App.
