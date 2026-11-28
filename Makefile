@@ -19,7 +19,7 @@ BUMP := bin/shepherd-bump
 .PHONY: help build test test-acceptance injection-drill check yaml-lint md-lint verify-memory-size \
         verify-traceability verify-docs-layout verify-caps-traceability verify-index-status \
         verify-version-bumped verify-changelog install-hooks clean \
-        lint test-affected smoke release-artifacts check-docs \
+        lint test-affected smoke release-artifacts check-docs fleet-audit \
         hook-commit hook-push \
         ci-branch ci-patch ci-release ci-release-promote ci-nightly ci-nightly-body ci-timing-init
 
@@ -101,6 +101,13 @@ verify-index-status:
 # docs/plan/SH-055-check-docs-plan.md for the per-repo mapping.
 # ---------------------------------------------------------------------------
 check-docs: verify-traceability verify-index-status verify-memory-size
+
+# SH-057 — repeatable fleet arming + health audit. Operator tool, NOT a gate:
+# needs network + gh auth, so it is deliberately out of `check` / `ci-*`.
+# Writes docs/specs/fleet-audit-<date>.md. Args pass through, e.g.
+#   make fleet-audit ARGS="--offline --out /tmp/a.md"
+fleet-audit:
+	@scripts/fleet-audit.sh $(ARGS)
 
 verify-docs-layout:
 	@test/acceptance/test_SH_012_docs_layout.sh
