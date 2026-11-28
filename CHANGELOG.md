@@ -8,6 +8,25 @@ All notable changes to `shepherd` are recorded here. The format is based on
 
 Next: R2 (public launch prep) + SH-045…SH-051 (per-repo migrations to `include mk/ci.mk`).
 
+## [v0.12.0-rc1] — 2026-11-28 — SH-058 `verify-shipped-status` (closes SH-056 blind spot)
+
+Closes the `verify-index-status` (SH-056) blind spot: that check keeps INDEX.md
+and story frontmatter in agreement but can't tell when they agree on a stale
+value — which is exactly how SH-056 itself sat at `in-progress` after shipping
+in v0.10.1-rc1 (fixed this session in PR #62). The new gate asserts every story
+named in a released `## [vX.Y.Z]` CHANGELOG heading has frontmatter
+`status: shipped`. Wired into `check-docs`, so `make check`, pre-push, and
+`ci-branch` all enforce it. Heading-only, missing-story-file-tolerant, no-op
+without a CHANGELOG.
+
+### Added
+
+- `scripts/verify-shipped-status.sh` + `make verify-shipped-status`, wired into
+  `check-docs`.
+- `test/acceptance/test_SH_058_verify_shipped_status.sh` (16 assertions, 7
+  scenarios).
+- CAP `dev-cycle.verify-shipped-status`; story SH-058 + plan.
+
 ## [v0.11.0-rc1] — 2026-11-28 — SH-057 `make fleet-audit` (one repeatable fleet audit)
 
 Replaces hand-written fleet audits with one command. `scripts/fleet-audit.sh`

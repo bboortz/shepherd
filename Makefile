@@ -17,7 +17,7 @@ ACCEPTANCE_TESTS := $(wildcard test/acceptance/test_SH_*.sh)
 BUMP := bin/shepherd-bump
 
 .PHONY: help build test test-acceptance injection-drill check yaml-lint md-lint verify-memory-size \
-        verify-traceability verify-docs-layout verify-caps-traceability verify-index-status \
+        verify-traceability verify-docs-layout verify-caps-traceability verify-index-status verify-shipped-status \
         verify-version-bumped verify-changelog install-hooks clean \
         lint test-affected smoke release-artifacts check-docs fleet-audit \
         hook-commit hook-push \
@@ -94,13 +94,18 @@ verify-traceability: verify-docs-layout verify-caps-traceability
 verify-index-status:
 	@scripts/verify-index-status.sh
 
+# SH-058 — closes the verify-index-status blind spot: a story named in a
+# released CHANGELOG `## [vX]` heading must have status: shipped.
+verify-shipped-status:
+	@scripts/verify-shipped-status.sh
+
 # ---------------------------------------------------------------------------
 # SH-055 — fleet-wide check-docs wrapper. Each fleet repo's check-docs
 # target has the SAME NAME but repo-specific body. Shepherd's wraps the
 # existing verify-* drift targets + SH-056's index-status check; see
 # docs/plan/SH-055-check-docs-plan.md for the per-repo mapping.
 # ---------------------------------------------------------------------------
-check-docs: verify-traceability verify-index-status verify-memory-size
+check-docs: verify-traceability verify-index-status verify-shipped-status verify-memory-size
 
 # SH-057 — repeatable fleet arming + health audit. Operator tool, NOT a gate:
 # needs network + gh auth, so it is deliberately out of `check` / `ci-*`.
