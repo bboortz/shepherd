@@ -1,7 +1,7 @@
 ---
 id: SH-056
 slug: verify-index-status
-status: in-progress
+status: shipped
 created: 2026-11-24
 owner: @benni
 ---
